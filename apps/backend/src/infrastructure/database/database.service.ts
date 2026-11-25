@@ -1,20 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { OnModuleDestroy } from '@nestjs/common'; 
+import type { OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import { databaseSchema } from './database.schema.js';
+import type { AppDatabase } from './database.types.js';
 
-type ConnectionProbe = {
-    database_name : string
-    role_name : string
-} 
+type ConnectionProbe = { database_name: string; role_name: string };
+
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private readonly pool: Pool;
-  readonly db: NodePgDatabase;
+  readonly db: AppDatabase;
 
   constructor(config: ConfigService) {
     this.pool = new Pool({
@@ -25,28 +24,19 @@ export class DatabaseService implements OnModuleDestroy {
       query_timeout: 10_000,
       enableChannelBinding: true,
     });
-
     this.pool.on('error', () => {
-      this.logger.warn('Se interrumpió una conexión inactiva de PostgreSQL.');
+      this.logger.warn('An idle PostgreSQL connection was interrupted.');
     });
-
-    this.db = drizzle(this.pool);
+    this.db = drizzle(this.pool, { schema: databaseSchema });
   }
 
   async checkConnection(): Promise<void> {
     const result = await this.db.execute<ConnectionProbe>(sql`
-      SELECT
-        current_database() AS database_name,
-        current_user AS role_name
+      SELECT current_database() AS database_name, current_user AS role_name
     `);
-
     const connection = result.rows[0];
-
-    if (
-      connection?.database_name !== 'gabinete_ucb' ||
-      connection?.role_name !== 'gabinete_app'
-    ) {
-      throw new Error('La conexión no utiliza la base y el rol previstos.');
+    if (connection?.database_name !== 'gabinete_ucb' || connection?.role_name !== 'gabinete_app') {
+      throw new Error('The connection does not use the expected database and runtime role.');
     }
   }
 
