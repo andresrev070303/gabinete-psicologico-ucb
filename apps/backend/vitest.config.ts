@@ -5,6 +5,11 @@ export default defineConfig({
   // added by `nest g library`. Requires Vite 8, which ships this option.
   resolve: { tsconfigPaths: true },
   test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+    },
     globals: true,
     root: './',
     include: ['src/**/*.spec.ts'],
