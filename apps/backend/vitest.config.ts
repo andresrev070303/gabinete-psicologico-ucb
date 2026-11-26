@@ -1,17 +1,31 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 
+const backendRoot = import.meta.dirname;
+const repositoryRoot = resolve(backendRoot, '../..');
+
 export default defineConfig({
-  // Resolves the path aliases declared in tsconfig.json, including the ones
-  // added by `nest g library`. Requires Vite 8, which ships this option.
+  root: backendRoot,
   resolve: { tsconfigPaths: true },
   test: {
+    globals: true,
+    include: ['src/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.spec.ts',
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'src/infrastructure/database/schema.ts',
+        'src/infrastructure/database/relations.ts',
+      ],
       reportsDirectory: './coverage',
+      reporter: [
+        'text',
+        'html',
+        ['lcov', { projectRoot: repositoryRoot }],
+      ],
     },
-    globals: true,
-    root: './',
-    include: ['src/**/*.spec.ts'],
   },
 });
