@@ -1,3 +1,5 @@
+import { OPERATIONAL_ROLE_CODES } from './identity-catalog.js';
+
 export type RoleAssignmentActor = Readonly<{
   accountId: string;
   permissionCodes: readonly string[];
@@ -10,11 +12,9 @@ export type RoleAssignmentTarget = Readonly<{
 }>;
 
 export class RoleDelegationPolicy {
-  private readonly operationalRoles: ReadonlySet<string> = new Set([
-    'psychologist',
-    'assistant',
-    'degree_student',
-  ]);
+  private readonly operationalRoles: ReadonlySet<string> = new Set(
+    OPERATIONAL_ROLE_CODES,
+  );
 
   allowsRole(roleCode: string): boolean {
     return this.operationalRoles.has(roleCode);
@@ -25,7 +25,12 @@ export class RoleDelegationPolicy {
     target: RoleAssignmentTarget,
     roleCode: string,
   ): boolean {
-    return this.canChangeRole(actor, target, roleCode, 'roles.assign_operational');
+    return this.canChangeRole(
+      actor,
+      target,
+      roleCode,
+      'roles.assign_operational',
+    );
   }
 
   canRevokeRole(
@@ -33,7 +38,12 @@ export class RoleDelegationPolicy {
     target: RoleAssignmentTarget,
     roleCode: string,
   ): boolean {
-    return this.canChangeRole(actor, target, roleCode, 'roles.revoke_operational');
+    return this.canChangeRole(
+      actor,
+      target,
+      roleCode,
+      'roles.revoke_operational',
+    );
   }
 
   private canChangeRole(

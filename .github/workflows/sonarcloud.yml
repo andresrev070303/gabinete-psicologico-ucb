@@ -20,6 +20,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: gabinete_test
+          POSTGRES_PASSWORD: local-tests-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gabinete_test -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
@@ -55,6 +70,13 @@ jobs:
         working-directory: apps/backend
         run: npm run test:e2e -- --coverage
 
+      - name: Run PostgreSQL integration tests with coverage
+        working-directory: apps/backend
+        env:
+          # Disposable CI database only. No Neon credentials are used.
+          TEST_DATABASE_URL: postgresql://gabinete_test:local-tests-only@127.0.0.1:5432/postgres
+        run: npm run test:db:ci
+
       - name: Install frontend dependencies
         working-directory: apps/frontend
         run: npm ci --ignore-scripts
@@ -73,6 +95,7 @@ jobs:
         run: |
           test -s apps/backend/coverage/lcov.info
           test -s apps/backend/coverage/e2e/lcov.info
+          test -s apps/backend/coverage/postgres/lcov.info
           test -s apps/frontend/coverage/lcov.info
 
       - name: Upload application coverage reports

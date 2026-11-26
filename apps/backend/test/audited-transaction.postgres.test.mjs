@@ -19,6 +19,7 @@ assert.equal(localUrl.pathname, '/postgres');
 const suffix = randomUUID().replaceAll('-', '');
 const databaseName = `gabinete_test_${suffix}`;
 const runtimeRole = `runtime_test_${suffix}`;
+const runtimePassword = randomBytes(32).toString('hex');
 const admin = new Client({ connectionString: localUrl.toString() });
 const actors = [0, 1].map(() => ({ accountId: randomUUID(), authSessionId: randomUUID(), requestId: randomUUID() }));
 let ownerPool;
@@ -37,7 +38,7 @@ before(async () => {
   await migrate(drizzle(ownerPool), {
     migrationsFolder: fileURLToPath(new URL('../drizzle/', import.meta.url)),
   });
-  await admin.query(`CREATE ROLE "${runtimeRole}" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`);
+  await admin.query(`CREATE ROLE "${runtimeRole}" LOGIN PASSWORD '${runtimePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`);
   roleCreated = true;
   await ownerPool.query(`GRANT USAGE ON SCHEMA core, iam, audit TO "${runtimeRole}"`);
   await ownerPool.query(`GRANT SELECT, INSERT ON core.person TO "${runtimeRole}"`);
@@ -66,7 +67,7 @@ before(async () => {
   }
   const runtimeUrl = new URL(ownerUrl);
   runtimeUrl.username = runtimeRole;
-  runtimeUrl.password = '';
+  runtimeUrl.password = runtimePassword;
   runtimePool = new Pool({ connectionString: runtimeUrl.toString(), max: 2 });
   transactions = new AuditedTransaction(drizzle(runtimePool));
 });

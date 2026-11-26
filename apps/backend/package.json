@@ -21,9 +21,12 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "test:db": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-database.ps1",
+    "test:db:ci": "node --test --test-timeout=30000 ./test/audited-transaction.postgres.test.mjs && vitest run --config ./vitest.config.postgres.ts --coverage",
+    "identity:bootstrap": "npm run build && node ./scripts/bootstrap-administrator.mjs",
     "check": "npm run build && npm test && npm run test:e2e && npm run test:db"
   },
   "dependencies": {
+    "@nestjs/authentication": "0.1.7",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.1.1",
     "@nestjs/core": "^12.0.1",

@@ -23,7 +23,60 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Backend del Gabinete de Servicios Psicológicos UCB. Monolito modular por dominios,
+con capas internas y API REST sobre HTTPS. El código de identidad se organiza en
+`src/modules/identity/domain`, `application` e `infrastructure`.
+
+## Inicializar identidad en development
+
+Este bloque instala el catálogo aprobado de identidad y la primera cuenta
+administradora. Todavía no incorpora inicio de sesión ni gestión de cuentas por HTTP.
+
+1. En Neon, selecciona `development / gabinete_ucb`, el propietario y **pooling OFF**.
+2. Guarda esa cadena únicamente en `.env.migrations`, como `MIGRATION_DATABASE_URL`.
+   Puedes usar `.env.migrations.example` como referencia. El archivo real está ignorado por Git.
+3. Desde una terminal local interactiva en `apps/backend`, ejecuta `npm run identity:bootstrap`.
+4. Confirma `development/gabinete_ucb` e introduce nombre, apellidos, correo y contraseña
+   de la cuenta administradora. La contraseña se solicita dos veces y no se muestra.
+5. Verifica en el editor SQL de Neon los conteos esperados: **1 cuenta, 5 roles,
+   15 permisos y 18 concesiones de permiso a rol**.
+
+La contraseña admite entre 15 y 128 caracteres Unicode, incluyendo espacios. Se usa
+`PasswordHasher` de `@nestjs/authentication`, con scrypt y sus parámetros por defecto;
+la biblioteca aplica NFKC internamente tanto al generar como al verificar el hash.
+No se imprime ni almacena la contraseña en texto claro. Las pruebas usan un coste
+menor exclusivamente para sus cuentas desechables.
+
+Persona, cuenta, roles, permisos y concesiones se guardan en una sola transacción.
+La auditoría utiliza el actor de sistema `bootstrap-first-admin` y una petición UUID,
+porque la primera cuenta todavía no tiene una sesión humana. No se crea una sesión
+de acceso durante la instalación. El administrador recibe únicamente los ocho
+permisos de identidad definidos para él; no hereda funciones clínicas.
+
+El comando requiere que las tablas de identidad estén vacías. Si encuentra una
+cuenta o un catálogo parcial, se detiene sin sobrescribir datos. Dos ejecuciones
+concurrentes no pueden crear dos administradores. No ejecutes la antigua plantilla
+`03_bootstrap_primera_cuenta.sql` junto con este procedimiento.
+
+La conexión propietaria es local: **no se configura en Render ni en el frontend**.
+El backend web conserva su `DATABASE_URL` con `gabinete_app` y pooling. Este comando
+no ejecuta migraciones, no modifica el esquema y no se ejecuta al arrancar el servidor.
+
+## Pruebas por bloque
+
+`npm run test:cov` ejecuta reglas y validación; `npm run test:e2e -- --coverage`
+comprueba el contrato HTTP existente. `npm run build` seguido de `npm run test:db`
+levanta PostgreSQL local temporal en Windows, prueba auditoría e inicialización y
+detiene el servidor al finalizar. Requiere PostgreSQL 18 instalado; `PG_BIN` permite
+indicar otra ubicación de sus binarios.
+
+En GitHub, `npm run test:db:ci` utiliza exclusivamente el contenedor PostgreSQL del
+workflow y `TEST_DATABASE_URL`. Nunca lee la conexión de Neon. La cobertura de estas
+pruebas se publica en `coverage/postgres/lcov.info` y se importa en SonarCloud.
+
+El siguiente bloque es autenticación y sesiones persistentes. Después siguen la
+administración de cuentas con permisos, los flujos de activación y recuperación,
+y las pantallas de React con pruebas integradas.
 
 ## Project setup
 

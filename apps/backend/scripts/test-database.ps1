@@ -34,7 +34,7 @@ try {
   if ($LASTEXITCODE -ne 0) { throw 'Failed to start the private PostgreSQL test cluster.' }
   $taskStarted = $true
   $env:TEST_DATABASE_URL = "postgresql://gabinete_test@127.0.0.1:$taskPort/postgres"
-  & node --test --test-timeout=30000 '.\test\audited-transaction.postgres.test.mjs'
+  & npm run test:db:ci
   $taskCode = $LASTEXITCODE
 } finally {
   $env:TEST_DATABASE_URL = $taskPreviousUrl
