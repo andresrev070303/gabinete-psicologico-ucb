@@ -1,4 +1,4 @@
-import { pgTable, pgSchema, index, foreignKey, unique, check, uuid, timestamp, varchar, inet, type AnyPgColumn, uniqueIndex, text, boolean, smallint, integer, bigint, jsonb, date, char, numeric } from "drizzle-orm/pg-core"
+import { pgSchema, index, foreignKey, unique, check, uuid, timestamp, varchar, inet, uniqueIndex, text, boolean, smallint, integer, bigint, jsonb, date, char, numeric } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { customType } from 'drizzle-orm/pg-core';
 import type { PgTableExtraConfigValue } from 'drizzle-orm/pg-core';
@@ -589,7 +589,7 @@ export const caseStateHistoryInCare = care.table("case_state_history", {
 	reason: text(),
 	changedAt: timestamp("changed_at", { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	eventNo: bigint("event_no", { mode: "number" }).generatedAlwaysAsIdentity({ name: "care.case_state_history_event_no_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	eventNo: bigint("event_no", { mode: "number" }).generatedAlwaysAsIdentity({ name: "care.case_state_history_event_no_seq", startWith: 1, increment: 1, minValue: 1, maxValue: "9223372036854775807", cache: 1 }),
 	caseVersionNo: integer("case_version_no").notNull(),
 }, (table) => [
 	index("case_state_history_idx").using("btree", table.caseId.asc().nullsLast(), table.changedAt.desc().nullsFirst()),
@@ -627,7 +627,7 @@ export const sessionStatusHistoryInCare = care.table("session_status_history", {
 	reason: text(),
 	changedAt: timestamp("changed_at", { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	eventNo: bigint("event_no", { mode: "number" }).generatedAlwaysAsIdentity({ name: "care.session_status_history_event_no_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	eventNo: bigint("event_no", { mode: "number" }).generatedAlwaysAsIdentity({ name: "care.session_status_history_event_no_seq", startWith: 1, increment: 1, minValue: 1, maxValue: "9223372036854775807", cache: 1 }),
 }, (table) => [
 	index("session_status_history_idx").using("btree", table.sessionId.asc().nullsLast(), table.changedAt.desc().nullsFirst()),
 	foreignKey({
@@ -1404,7 +1404,7 @@ export const appointmentHistoryInAgenda = agenda.table("appointment_history", {
 	changedByAccountId: uuid("changed_by_account_id").notNull(),
 	changedAt: timestamp("changed_at", { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	eventNo: bigint("event_no", { mode: "number" }).generatedAlwaysAsIdentity({ name: "agenda.appointment_history_event_no_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	eventNo: bigint("event_no", { mode: "number" }).generatedAlwaysAsIdentity({ name: "agenda.appointment_history_event_no_seq", startWith: 1, increment: 1, minValue: 1, maxValue: "9223372036854775807", cache: 1 }),
 }, (table) => [
 	index("appointment_history_idx").using("btree", table.appointmentId.asc().nullsLast(), table.changedAt.desc().nullsFirst()),
 	foreignKey({
@@ -1544,7 +1544,7 @@ export const documentVersionInArchive = archive.table("document_version", {
 
 export const changeEventInAudit = audit.table("change_event", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "audit.change_event_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "audit.change_event_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: "9223372036854775807", cache: 1 }),
 	schemaName: text("schema_name").notNull(),
 	tableName: text("table_name").notNull(),
 	rowId: uuid("row_id").notNull(),
@@ -1579,7 +1579,7 @@ export const changeEventInAudit = audit.table("change_event", {
 
 export const accessEventInAudit = audit.table("access_event", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "audit.access_event_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity({ name: "audit.access_event_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: "9223372036854775807", cache: 1 }),
 	actorAccountId: uuid("actor_account_id").notNull(),
 	action: varchar({ length: 25 }).notNull(),
 	targetKind: varchar("target_kind", { length: 45 }).notNull(),

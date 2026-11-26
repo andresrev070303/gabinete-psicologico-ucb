@@ -168,7 +168,7 @@
             "increment": "1",
             "startWith": "1",
             "minValue": "1",
-            "maxValue": "9223372036854776000",
+            "maxValue": "9223372036854775807",
             "cache": "1",
             "cycle": false
           }
@@ -1534,7 +1534,7 @@
             "increment": "1",
             "startWith": "1",
             "minValue": "1",
-            "maxValue": "9223372036854776000",
+            "maxValue": "9223372036854775807",
             "cache": "1",
             "cycle": false
           }
@@ -3016,7 +3016,7 @@
             "increment": "1",
             "startWith": "1",
             "minValue": "1",
-            "maxValue": "9223372036854776000",
+            "maxValue": "9223372036854775807",
             "cache": "1",
             "cycle": false
           }
@@ -3213,7 +3213,7 @@
             "increment": "1",
             "startWith": "1",
             "minValue": "1",
-            "maxValue": "9223372036854776000",
+            "maxValue": "9223372036854775807",
             "cache": "1",
             "cycle": false
           }
@@ -7632,7 +7632,7 @@
             "increment": "1",
             "startWith": "1",
             "minValue": "1",
-            "maxValue": "9223372036854776000",
+            "maxValue": "9223372036854775807",
             "cache": "1",
             "cycle": false
           }

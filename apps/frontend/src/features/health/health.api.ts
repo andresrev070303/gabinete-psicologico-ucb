@@ -23,8 +23,12 @@ function getHealthEndpoint(): URL {
   let endpoint: URL;
 
   try {
-    const baseUrl = `${apiBaseUrl.trim().replace(/\/+$/, '')}/`;
-    endpoint = new URL('health/database', baseUrl);
+    const baseUrl = apiBaseUrl.trim();
+    let end = baseUrl.length;
+    while (end > 0 && baseUrl[end - 1] === '/') {
+      end -= 1;
+    }
+    endpoint = new URL('health/database', `${baseUrl.slice(0, end)}/`);
   } catch {
     throw new Error('VITE_API_URL must be a valid URL.');
   }

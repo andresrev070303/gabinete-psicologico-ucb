@@ -90,7 +90,7 @@ function hasPgCode(error, expected) {
   return error?.code === expected || error?.cause?.code === expected;
 }
 
-test('commits the change and attributes its audit event to the verified context', async () => {
+void test('commits the change and attributes its audit event to the verified context', async () => {
   const id = randomUUID();
   const result = await transactions.run(actors[0], async (tx) => {
     await insertPerson(tx, id);
@@ -103,7 +103,7 @@ test('commits the change and attributes its audit event to the verified context'
   assert.deepEqual(events.rows, [{ actor_account_id: actors[0].accountId, auth_session_id: actors[0].authSessionId, request_id: actors[0].requestId }]);
 });
 
-test('rolls back the business change and audit event when the use case fails', async () => {
+void test('rolls back the business change and audit event when the use case fails', async () => {
   const id = randomUUID();
   const failure = new Error('Use case rejected');
   await assert.rejects(transactions.run(actors[0], async (tx) => {
@@ -114,7 +114,7 @@ test('rolls back the business change and audit event when the use case fails', a
   assert.equal((await ownerPool.query('SELECT 1 FROM audit.change_event WHERE row_id=$1', [id])).rowCount, 0);
 });
 
-test('does not retain the audit context when a pooled connection is reused', async () => {
+void test('does not retain the audit context when a pooled connection is reused', async () => {
   const singlePool = new Pool({ ...runtimePool.options, max: 1 });
   try {
     const runner = new AuditedTransaction(drizzle(singlePool));
@@ -128,14 +128,14 @@ test('does not retain the audit context when a pooled connection is reused', asy
   }
 });
 
-test('rejects an account and session that do not belong together', async () => {
+void test('rejects an account and session that do not belong together', async () => {
   await assert.rejects(
     transactions.run({ ...actors[0], authSessionId: actors[1].authSessionId }, (tx) => insertPerson(tx, randomUUID())),
     (error) => hasPgCode(error, '22023'),
   );
 });
 
-test('keeps two concurrent audit contexts isolated', async () => {
+void test('keeps two concurrent audit contexts isolated', async () => {
   const ids = actors.map(() => randomUUID());
   let reached = 0;
   let release;
@@ -152,13 +152,13 @@ test('keeps two concurrent audit contexts isolated', async () => {
   }
 });
 
-test('the runtime role cannot insert or rewrite audit events directly', async () => {
+void test('the runtime role cannot insert or rewrite audit events directly', async () => {
   for (const query of ['INSERT INTO audit.change_event DEFAULT VALUES', "UPDATE audit.change_event SET operation='DELETE'"]) {
     await assert.rejects(runtimePool.query(query), (error) => hasPgCode(error, '42501'));
   }
 });
 
-test('the runtime role cannot impersonate the system actor', async () => {
+void test('the runtime role cannot impersonate the system actor', async () => {
   await assert.rejects(
     runtimePool.query("SELECT audit.set_system_context('forged', $1)", [randomUUID()]),
     (error) => hasPgCode(error, '42501'),

@@ -37,7 +37,11 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: apps/backend
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Check backend
+        working-directory: apps/backend
+        run: npm run lint
 
       - name: Build backend
         working-directory: apps/backend
@@ -53,7 +57,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: apps/frontend
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Check frontend
         working-directory: apps/frontend
@@ -61,17 +65,24 @@ jobs:
           npm run lint
           npm run build
 
+      - name: Run frontend unit tests with coverage
+        working-directory: apps/frontend
+        run: npm run test:cov
+
       - name: Verify coverage report
         run: |
           test -s apps/backend/coverage/lcov.info
           test -s apps/backend/coverage/e2e/lcov.info
+          test -s apps/frontend/coverage/lcov.info
 
-      - name: Upload backend coverage report
+      - name: Upload application coverage reports
         if: ${{ !cancelled() && hashFiles('apps/backend/coverage/lcov.info') != '' }}
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: backend-coverage
-          path: apps/backend/coverage/
+          name: application-coverage
+          path: |
+            apps/backend/coverage/
+            apps/frontend/coverage/
           if-no-files-found: error
           retention-days: 7
 
