@@ -13,14 +13,68 @@ import { OpaqueSessionProvider } from './presentation/opaque-session.provider.js
 import { AuthenticationController } from './presentation/authentication.controller.js';
 import { SessionActivityInterceptor } from './presentation/session-activity.interceptor.js';
 import { SignInPipe } from './presentation/sign-in.pipe.js';
+import { PasswordWorkLimiter } from './application/password-work-limiter.js';
+import { ActivateAccountService } from './application/activate-account.service.js';
+import { DirectorManagementService } from './application/director-management.service.js';
+import { PostgresDirectorManagementStore } from './infrastructure/postgres-director-management.store.js';
+import { AccountAccessPolicy } from './infrastructure/account-access.policy.js';
+import { AccountActivationController } from './presentation/account-activation.controller.js';
+import {
+  AccountsController,
+  RolesController,
+} from './presentation/accounts.controller.js';
+import {
+  AccountPagePipe,
+  ActivateAccountPipe,
+  InviteDirectorPipe,
+} from './presentation/account-management.pipes.js';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [AuthenticationController],
+  controllers: [
+    AuthenticationController,
+    AccountActivationController,
+    AccountsController,
+    RolesController,
+  ],
   providers: [
     RoleDelegationPolicy,
     SessionTokens,
     SignInPipe,
+    AccountAccessPolicy,
+    PasswordWorkLimiter,
+    AccountPagePipe,
+    ActivateAccountPipe,
+    InviteDirectorPipe,
+    {
+      provide: PostgresDirectorManagementStore,
+      inject: [DatabaseService],
+      useFactory: (database: DatabaseService) =>
+        new PostgresDirectorManagementStore(database.db),
+    },
+    {
+      provide: DirectorManagementService,
+      inject: [PostgresDirectorManagementStore, SessionTokens],
+      useFactory: (
+        store: PostgresDirectorManagementStore,
+        tokens: SessionTokens,
+      ) => new DirectorManagementService(store, tokens),
+    },
+    {
+      provide: ActivateAccountService,
+      inject: [
+        PostgresDirectorManagementStore,
+        PasswordHasher,
+        SessionTokens,
+        PasswordWorkLimiter,
+      ],
+      useFactory: (
+        store: PostgresDirectorManagementStore,
+        passwords: PasswordHasher,
+        tokens: SessionTokens,
+        limiter: PasswordWorkLimiter,
+      ) => new ActivateAccountService(store, passwords, tokens, limiter),
+    },
     {
       provide: PostgresAuthenticationStore,
       inject: [DatabaseService],
@@ -35,12 +89,18 @@ import { SignInPipe } from './presentation/sign-in.pipe.js';
     },
     {
       provide: AuthenticationService,
-      inject: [PostgresAuthenticationStore, PasswordHasher, SessionTokens],
+      inject: [
+        PostgresAuthenticationStore,
+        PasswordHasher,
+        SessionTokens,
+        PasswordWorkLimiter,
+      ],
       useFactory: (
         store: PostgresAuthenticationStore,
         passwords: PasswordHasher,
         tokens: SessionTokens,
-      ) => new AuthenticationService(store, passwords, tokens),
+        limiter: PasswordWorkLimiter,
+      ) => new AuthenticationService(store, passwords, tokens, limiter),
     },
     OpaqueSessionProvider,
     SessionActivityInterceptor,

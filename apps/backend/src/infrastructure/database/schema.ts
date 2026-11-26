@@ -1650,3 +1650,23 @@ export const vPracticumApprovedHoursInReporting = reporting.view("v_practicum_ap
 	studentPersonId: uuid("student_person_id"),
 	approvedHours: numeric("approved_hours", { precision: 12, scale:  2 }),
 }).as(sql`SELECT p.id AS placement_id, p.student_person_id, COALESCE(sum(EXTRACT(epoch FROM a.ended_at - a.started_at) / 3600.0) FILTER (WHERE a.approval_status::text = 'approved'::text), 0::numeric)::numeric(12,2) AS approved_hours FROM practicum.placement p LEFT JOIN practicum.activity_log a ON a.placement_id = p.id GROUP BY p.id, p.student_person_id`);
+
+export const accountActionTokenInIam = iam.table('account_action_token', {
+  id: uuid().defaultRandom().primaryKey().notNull(), accountId: uuid('account_id').notNull(),
+  purpose: varchar({ length: 30 }).notNull(), tokenHash: bytea('token_hash').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true, mode: 'string' }),
+  consumedBySessionId: uuid('consumed_by_session_id'), revokedAt: timestamp('revoked_at', { withTimezone: true, mode: 'string' }),
+}, (table) => [
+  foreignKey({ columns: [table.accountId], foreignColumns: [accountInIam.id], name: 'account_action_token_account_id_fkey' }).onDelete('restrict'),
+  foreignKey({ columns: [table.consumedBySessionId, table.accountId], foreignColumns: [authSessionInIam.id,authSessionInIam.accountId], name: 'action_consumption_session' }).onDelete('restrict'),
+  unique('account_action_token_token_hash_key').on(table.tokenHash),
+  uniqueIndex('pending_account_action_uq').on(table.accountId,table.purpose).where(sql`consumed_at IS NULL AND revoked_at IS NULL`),
+  index('account_action_account_idx').on(table.accountId,table.createdAt.desc()),
+  check('account_action_token_purpose_check',sql`purpose IN ('director_activation','operational_activation','password_reset')`),
+  check('account_action_token_token_hash_check',sql`octet_length(token_hash)=32`),
+  check('action_expiration',sql`expires_at>created_at`),
+  check('action_consumption',sql`(consumed_at IS NULL)=(consumed_by_session_id IS NULL) AND (consumed_at IS NULL OR consumed_at>=created_at)`),
+  check('action_revocation',sql`revoked_at IS NULL OR (revoked_at>=created_at AND consumed_at IS NULL)`),
+]);

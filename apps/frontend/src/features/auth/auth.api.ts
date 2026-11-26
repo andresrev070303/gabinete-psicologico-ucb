@@ -1,4 +1,4 @@
-import { getApiEndpoint } from '../../lib/api-url';
+import { apiRequest } from '../../lib/api-client';
 import type { AuthenticatedIdentity, SignInInput } from './auth.types';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -34,23 +34,11 @@ async function send(
   signal: AbortSignal,
   input?: SignInInput,
 ): Promise<Response> {
-  const endpoint = getApiEndpoint(`auth/${path}`);
-  if (endpoint.origin !== globalThis.location.origin) {
-    throw new Error(
-      'Authentication requires a same-origin API. Set VITE_API_URL=/api.',
-    );
-  }
-  return fetch(endpoint, {
-    method,
-    credentials: 'same-origin',
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-      ...(input ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: input ? JSON.stringify(input) : undefined,
-    signal: AbortSignal.any([signal, AbortSignal.timeout(90_000)]),
-  });
+  return apiRequest(
+    `auth/${path}`,
+    { method, body: input ? JSON.stringify(input) : undefined },
+    signal,
+  );
 }
 function checkStatus(response: Response): void {
   if (response.ok) return;

@@ -5,6 +5,7 @@ import { AppService } from './app.service.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { AuthenticationModule } from '@nestjs/authentication';
+import { AuthorizationModule } from '@nestjs/authorization';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthenticationModule } from '@nestjs/authentication';
       ignoreEnvFile: process.env.NODE_ENV === 'test',
     }),
     AuthenticationModule.forRoot({ refreshToken: false }),
+    AuthorizationModule.forRoot(),
     DatabaseModule,
     IdentityModule,
   ],

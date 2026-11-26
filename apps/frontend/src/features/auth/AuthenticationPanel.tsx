@@ -1,8 +1,13 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import type { AuthenticatedIdentity } from './auth.types';
 import { useAuthentication } from './useAuthentication';
 
-export function AuthenticationPanel() {
+export function AuthenticationPanel({
+  children,
+}: {
+  children?: (identity: AuthenticatedIdentity['identity']) => ReactNode;
+} = {}) {
   const { state, authenticate, endSession } = useAuthentication();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,7 +23,7 @@ export function AuthenticationPanel() {
 
   return (
     <section
-      className="authentication-panel"
+      className={`authentication-panel${state.current ? ' authentication-panel--signed-in' : ''}`}
       aria-labelledby="authentication-title"
       aria-busy={state.busy}
     >
@@ -46,6 +51,7 @@ export function AuthenticationPanel() {
           >
             Sign out
           </button>
+          {children?.(state.current.identity)}
         </>
       ) : (
         <form

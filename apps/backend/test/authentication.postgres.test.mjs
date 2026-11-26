@@ -223,7 +223,14 @@ test('upgrades an existing installation without replacing the administrator, pas
         'SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations',
       )
     ).rows[0].count,
-  ).toBe(2);
+  ).toBe(
+    JSON.parse(
+      await readFile(
+        new URL('../drizzle/meta/_journal.json', import.meta.url),
+        'utf8',
+      ),
+    ).entries.length,
+  );
 });
 
 test('signs in with a private cookie, stores only its hash and attributes the session and login to the new session', async () => {

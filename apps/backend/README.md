@@ -27,11 +27,66 @@ Backend del Gabinete de Servicios Psicológicos UCB. Monolito modular por domini
 con capas internas y API REST sobre HTTPS. El código de identidad se organiza en
 `src/modules/identity/domain`, `application`, `infrastructure` y `presentation`.
 
-## Inicializar identidad en development
+## Estado y siguiente paso en development
+
+El Administrador y el catálogo ya están instalados. El usuario confirmó el ingreso,
+la conservación de la sesión al recargar y la salida en local. Para continuar con
+la habilitación del Director, aplica la migración incremental con `npm run db:migrate`
+desde `apps/backend`, usando `.env.migrations` con el propietario y pooling OFF.
+La conexión web de `.env` conserva `gabinete_app` y pooling ON.
+
+La nueva migración `0002_director_activation.sql` agrega enlaces de un solo uso,
+auditoría de sus cambios, privilegios para las operaciones nuevas y un control
+que impide dos concesiones vigentes del rol Director. No crea cuentas ni cambia
+el catálogo. El asistente la comprobó con PostgreSQL local temporal y no la ejecutó
+en Neon. No repitas `identity:bootstrap` para actualizar una instalación existente.
+
+Después de migrar, reinicia backend y frontend y realiza este recorrido con datos
+ficticios en `http://localhost:5173`:
+
+1. Ingresa como Administrador. Si el acceso tiene diez minutos o más, vuelve a
+   autenticarte antes de invitar o designar: recargar no verifica la contraseña.
+2. En **Accounts**, completa **Invite a director candidate** y crea la invitación.
+3. Conserva el enlace que se muestra y entrégalo manualmente al destinatario para
+   las pruebas. Tiene 24 horas de vigencia y se devuelve sólo al crearlo; no se
+   guarda como texto en la base ni se recupera desde el listado.
+4. Abre el enlace en una ventana privada para representar al candidato. Establece
+   y confirma su contraseña de 15 a 128 caracteres. La activación es de un solo uso
+   y no inicia sesión ni concede el rol Director automáticamente.
+5. En la ventana del Administrador, pulsa **Refresh accounts**, selecciona
+   **Assign director** en la cuenta activada y confirma expresamente.
+6. Ingresa con la nueva cuenta en la ventana privada. Debe mostrar `director`.
+   Designar un reemplazo revoca las sesiones del Director anterior y del nuevo;
+   las cuentas y las concesiones previas se conservan como historial.
+
+El fragmento `#activate=...` se retira del historial antes de montar React y el
+secreto se envía en el cuerpo de `POST /auth/activations`. Un GET no consume el enlace.
+La entrega manual corresponde a pruebas con datos ficticios; no se incorporó un
+proveedor de correo. El Administrador no elige ni obtiene la contraseña del candidato.
+
+Puedes comprobar el esquema y la dirección vigente sin consultar credenciales:
+
+```sql
+SELECT to_regclass('iam.account_action_token')::text AS action_tokens;
+
+SELECT a.email, r.code
+FROM iam.account_role ar
+JOIN iam.account a ON a.id = ar.account_id
+JOIN iam.role r ON r.id = ar.role_id
+WHERE r.code = 'director' AND ar.revoked_at IS NULL;
+```
+
+Antes de designar, la segunda consulta devuelve cero filas. Después devuelve una.
+El candidato no es la propia cuenta administradora ni una cuenta con historial
+operativo: la primera designación utiliza una cuenta nueva invitada expresamente.
+
+La administración de cuentas operativas, bajas, reincorporación, recuperación de
+contraseñas, sesiones propias y pantalla de auditoría continúa pendiente.
+
+## Instalación inicial en una base vacía
 
 Este bloque instala el catálogo aprobado de identidad y la primera cuenta
-administradora. La autenticación HTTP se configura en el bloque siguiente;
-la administración de otras cuentas todavía está pendiente.
+administradora. Se utiliza exclusivamente al instalar en una base vacía.
 
 1. En Neon, selecciona `development / gabinete_ucb`, el propietario y **pooling OFF**.
 2. Guarda esa cadena únicamente en `.env.migrations`, como `MIGRATION_DATABASE_URL`.
@@ -75,9 +130,9 @@ En GitHub, `npm run test:db:ci` utiliza exclusivamente el contenedor PostgreSQL 
 workflow y `TEST_DATABASE_URL`. Nunca lee la conexión de Neon. La cobertura de estas
 pruebas se publica en `coverage/postgres/lcov.info` y se importa en SonarCloud.
 
-El siguiente bloque es autenticación y sesiones persistentes. Después siguen la
-administración de cuentas con permisos, los flujos de activación y recuperación,
-y las pantallas de React con pruebas integradas.
+Las pruebas cubren autenticación, invitación, activación, designación y sustitución,
+autorización por permisos, cuentas protegidas, concurrencia y rollback. Continúan
+pendientes los flujos de administración operativa y recuperación de acceso.
 
 ## Autenticación y migración incremental
 
@@ -113,6 +168,11 @@ Endpoints implementados:
 | `POST /auth/sign-in` | Valida correo y contraseña; crea sesión persistente y cookie HttpOnly. |
 | `GET /auth/me` | Devuelve identidad, roles y permisos vigentes de la sesión verificada. |
 | `POST /auth/sign-out` | Revoca la sesión y elimina su cookie. |
+| `GET /accounts` | Lista paginada de metadatos; Administrador ve identidad general y Director sólo cuentas operativas administrables. |
+| `GET /roles` | Consulta del catálogo activo predefinido; sin edición de roles o permisos. |
+| `POST /accounts/director-invitations` | Crea una cuenta pendiente y un enlace de activación; exige permiso y autenticación reciente del Administrador. |
+| `POST /auth/activations` | Establece la contraseña y consume el enlace atómicamente; 204 sin cookie de navegación. |
+| `POST /accounts/:id/director-assignment` | Designa o sustituye al Director con historial y revocación de sesiones; 204. |
 
 La credencial aleatoria se almacena como SHA-256 en PostgreSQL. El UUID de sesión
 es sólo un identificador de auditoría. La cookie usa `Secure` y prefijo `__Host-`
@@ -124,8 +184,19 @@ minutos bloquean temporalmente nuevos intentos; la verificación costosa de
 contraseñas se limita a una por instancia y puede responder 503 para reintentar.
 
 La sesión obtiene sus permisos actuales de PostgreSQL en cada petición. La
-administración de cuentas, los guardas de permisos de esas operaciones y los
-enlaces de activación/recuperación pertenecen al bloque siguiente.
+autorización de rutas utiliza `@nestjs/authorization` y políticas explícitas, sin
+una excepción universal para el Administrador. Las mutaciones bloquean y vuelven
+a verificar actor, sesión, permisos y destinatario en la misma transacción que
+modifica los datos. La activación usa una sesión interna cerrada para atribuir el
+cambio al destinatario que demostró poseer el enlace. Los hashes de contraseña y
+los secretos no se incluyen en las respuestas del listado ni en la auditoría de valores.
+
+El código mantiene las capas `presentation`, `application`, `domain` e
+`infrastructure` dentro de `identity`. Las reglas de elegibilidad están en dominio;
+los casos de uso y contratos en aplicación; las consultas y transacciones en el
+adaptador PostgreSQL; las validaciones HTTP, estados y filtros en presentación.
+Se comparte un limitador de trabajo de contraseñas entre ingreso y activación
+para conservar el presupuesto de memoria de la instancia gratuita.
 
 ## Cliente web y despliegue de este bloque
 

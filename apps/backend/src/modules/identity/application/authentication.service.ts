@@ -1,4 +1,5 @@
 import { AuthenticationFailure } from './authentication.contracts.js';
+import { PasswordWorkLimiter } from './password-work-limiter.js';
 import type {
   AuthenticationStore,
   PasswordVerifier,
@@ -7,11 +8,11 @@ import type {
 } from './authentication.contracts.js';
 
 export class AuthenticationService {
-  private signInInProgress = false;
   constructor(
     private readonly store: AuthenticationStore,
     private readonly passwords: PasswordVerifier,
     private readonly tokens: SessionTokenCodec,
+    private readonly limiter = new PasswordWorkLimiter(),
   ) {}
 
   authenticate(token: string) {
@@ -28,10 +29,7 @@ export class AuthenticationService {
   }
 
   async signIn(input: SignInInput, requestId: string, previousToken?: string) {
-    // One scrypt operation at a time on the 512 MB development service; no unbounded queue.
-    if (this.signInInProgress) throw new AuthenticationFailure('busy');
-    this.signInInProgress = true;
-    try {
+    return this.limiter.run(async () => {
       const secret = this.tokens.issue();
       const result = await this.store.signIn(
         {
@@ -64,8 +62,6 @@ export class AuthenticationService {
         session: result.session,
         token: secret.token,
       };
-    } finally {
-      this.signInInProgress = false;
-    }
+    });
   }
 }

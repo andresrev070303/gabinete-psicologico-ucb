@@ -207,3 +207,47 @@
   margin: 0.75rem 0;
   color: var(--text-h);
 }
+.accounts-panel {
+  margin-top: 2rem;
+  text-align: left;
+}
+.accounts-panel form,
+.accounts-panel label {
+  display: grid;
+  gap: 0.5rem;
+}
+.accounts-panel form,
+.invitation-result {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+.accounts-panel input,
+.accounts-panel button {
+  font: inherit;
+  padding: 0.5rem;
+  min-width: 0;
+}
+.accounts-panel .accounts-table {
+  overflow-x: auto;
+}
+.accounts-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.accounts-panel th,
+.accounts-panel td {
+  text-align: left;
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+.accounts-panel nav {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+.authentication-panel--signed-in {
+  max-width: 64rem;
+}

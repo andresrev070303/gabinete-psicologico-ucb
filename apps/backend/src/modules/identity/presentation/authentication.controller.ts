@@ -19,6 +19,7 @@ import type {
 } from '../application/authentication.contracts.js';
 import { SessionCookie, requestId } from './session-cookie.js';
 import { SignInPipe } from './sign-in.pipe.js';
+import { Can } from '@nestjs/authorization';
 
 @Controller('auth')
 export class AuthenticationController {
@@ -65,6 +66,7 @@ export class AuthenticationController {
   }
 
   @Get('me')
+  @Can.Anyone()
   me(
     @CurrentUser() identity: PublicIdentity,
     @CurrentSession() session: PublicSession,
@@ -75,6 +77,7 @@ export class AuthenticationController {
   }
 
   @Post('sign-out')
+  @Can.Anyone()
   @HttpCode(204)
   async signOut(
     @CurrentUser() identity: PublicIdentity,
