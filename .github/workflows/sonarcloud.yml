@@ -47,9 +47,9 @@ jobs:
         working-directory: apps/backend
         run: npm run test:cov
 
-      - name: Run backend end-to-end tests
+      - name: Run backend HTTP tests with coverage
         working-directory: apps/backend
-        run: npm run test:e2e
+        run: npm run test:e2e -- --coverage
 
       - name: Install frontend dependencies
         working-directory: apps/frontend
@@ -62,9 +62,12 @@ jobs:
           npm run build
 
       - name: Verify coverage report
-        run: test -s apps/backend/coverage/lcov.info
+        run: |
+          test -s apps/backend/coverage/lcov.info
+          test -s apps/backend/coverage/e2e/lcov.info
 
       - name: Upload backend coverage report
+        if: ${{ !cancelled() && hashFiles('apps/backend/coverage/lcov.info') != '' }}
         uses: actions/upload-artifact@v7.0.2
         with:
           name: backend-coverage
