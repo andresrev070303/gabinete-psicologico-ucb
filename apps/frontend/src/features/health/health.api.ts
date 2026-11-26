@@ -1,4 +1,5 @@
 import type { DatabaseHealth } from './health.types';
+import { getApiEndpoint } from '../../lib/api-url';
 
 const REQUEST_TIMEOUT_MS = 90_000;
 
@@ -13,37 +14,10 @@ function isDatabaseHealth(value: unknown): value is DatabaseHealth {
   );
 }
 
-function getHealthEndpoint(): URL {
-  const apiBaseUrl = import.meta.env.VITE_API_URL;
-
-  if (typeof apiBaseUrl !== 'string' || !apiBaseUrl.trim()) {
-    throw new Error('VITE_API_URL is required.');
-  }
-
-  let endpoint: URL;
-
-  try {
-    const baseUrl = apiBaseUrl.trim();
-    let end = baseUrl.length;
-    while (end > 0 && baseUrl[end - 1] === '/') {
-      end -= 1;
-    }
-    endpoint = new URL('health/database', `${baseUrl.slice(0, end)}/`);
-  } catch {
-    throw new Error('VITE_API_URL must be a valid URL.');
-  }
-
-  if (!['http:', 'https:'].includes(endpoint.protocol)) {
-    throw new Error('VITE_API_URL must use HTTP or HTTPS.');
-  }
-
-  return endpoint;
-}
-
 export async function checkDatabaseHealth(
   signal: AbortSignal,
 ): Promise<DatabaseHealth> {
-  const endpoint = getHealthEndpoint();
+  const endpoint = getApiEndpoint('health/database');
   const requestSignal = AbortSignal.any([
     signal,
     AbortSignal.timeout(REQUEST_TIMEOUT_MS),

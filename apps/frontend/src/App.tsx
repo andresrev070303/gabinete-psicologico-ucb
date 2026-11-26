@@ -1,4 +1,5 @@
 import { useHealthCheck } from './features/health/useHealthCheck';
+import { AuthenticationPanel } from './features/auth/AuthenticationPanel';
 import './App.css';
 
 const statusMessages = {
@@ -17,6 +18,7 @@ export default function App() {
     <main>
       <h1>Gabinete UCB</h1>
       <p>Development environment</p>
+      <AuthenticationPanel />
       <section aria-labelledby="health-title" aria-busy={isLoading}>
         <h2 id="health-title">Connection check</h2>
         <p role="status">{message}</p>

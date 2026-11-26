@@ -182,3 +182,28 @@
     border-right-color: var(--border);
   }
 }
+.authentication-panel {
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  text-align: left;
+}
+.authentication-panel form {
+  display: grid;
+  gap: 0.65rem;
+}
+.authentication-panel input,
+.authentication-panel button {
+  font: inherit;
+  padding: 0.6rem;
+}
+.authentication-panel button {
+  margin-top: 0.6rem;
+  cursor: pointer;
+}
+.authentication-panel [role='alert'] {
+  margin: 0.75rem 0;
+  color: var(--text-h);
+}

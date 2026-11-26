@@ -23,6 +23,7 @@
     "test:db": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-database.ps1",
     "test:db:ci": "node --test --test-timeout=30000 ./test/audited-transaction.postgres.test.mjs && vitest run --config ./vitest.config.postgres.ts --coverage",
     "identity:bootstrap": "npm run build && node ./scripts/bootstrap-administrator.mjs",
+    "db:migrate": "npm run build && node ./scripts/migrate-database.mjs",
     "check": "npm run build && npm test && npm run test:e2e && npm run test:db"
   },
   "dependencies": {

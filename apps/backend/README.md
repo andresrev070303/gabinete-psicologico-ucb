@@ -25,12 +25,13 @@
 
 Backend del Gabinete de Servicios Psicológicos UCB. Monolito modular por dominios,
 con capas internas y API REST sobre HTTPS. El código de identidad se organiza en
-`src/modules/identity/domain`, `application` e `infrastructure`.
+`src/modules/identity/domain`, `application`, `infrastructure` y `presentation`.
 
 ## Inicializar identidad en development
 
 Este bloque instala el catálogo aprobado de identidad y la primera cuenta
-administradora. Todavía no incorpora inicio de sesión ni gestión de cuentas por HTTP.
+administradora. La autenticación HTTP se configura en el bloque siguiente;
+la administración de otras cuentas todavía está pendiente.
 
 1. En Neon, selecciona `development / gabinete_ucb`, el propietario y **pooling OFF**.
 2. Guarda esa cadena únicamente en `.env.migrations`, como `MIGRATION_DATABASE_URL`.
@@ -77,6 +78,84 @@ pruebas se publica en `coverage/postgres/lcov.info` y se importa en SonarCloud.
 El siguiente bloque es autenticación y sesiones persistentes. Después siguen la
 administración de cuentas con permisos, los flujos de activación y recuperación,
 y las pantallas de React con pruebas integradas.
+
+## Autenticación y migración incremental
+
+El administrador inicial ya está instalado en el entorno actual. **No repitas
+`identity:bootstrap` ni la migración `0000_baseline.sql` para continuar.**
+
+1. Conserva `DATABASE_URL` del backend con el rol `gabinete_app` y pooling ON.
+2. Conserva `MIGRATION_DATABASE_URL` sólo en `.env.migrations`, con el propietario
+   y pooling OFF de `development / gabinete_ucb`. Usa `sslmode=verify-full`.
+3. Desde `apps/backend`, ejecuta `npm run db:migrate` antes de desplegar este cambio.
+   El comando verifica que el historial existente coincida con el repositorio y
+   aplica únicamente las migraciones pendientes. Si el historial no coincide,
+   se detiene: no borres las tablas ni ejecutes nuevamente el esquema inicial.
+4. Verifica en Neon:
+
+```sql
+SELECT
+  (SELECT count(*) FROM iam.account) AS account_count,
+  (SELECT count(*) FROM iam.role) AS role_count,
+  (SELECT count(*) FROM iam.permission) AS permission_count,
+  (SELECT count(*) FROM iam.role_permission) AS grant_count,
+  to_regclass('audit.security_event')::text AS security_events;
+```
+
+Antes de crear otras cuentas, los conteos siguen siendo `1 / 5 / 15 / 18`.
+La tabla de eventos debe ser `audit.security_event`. El asistente sólo ha probado
+esta actualización en PostgreSQL local temporal; la ejecución en Neon es manual.
+
+Endpoints implementados:
+
+| Método y ruta | Comportamiento |
+| --- | --- |
+| `POST /auth/sign-in` | Valida correo y contraseña; crea sesión persistente y cookie HttpOnly. |
+| `GET /auth/me` | Devuelve identidad, roles y permisos vigentes de la sesión verificada. |
+| `POST /auth/sign-out` | Revoca la sesión y elimina su cookie. |
+
+La credencial aleatoria se almacena como SHA-256 en PostgreSQL. El UUID de sesión
+es sólo un identificador de auditoría. La cookie usa `Secure` y prefijo `__Host-`
+con `NODE_ENV=production`; en HTTP local usa un nombre sin ese prefijo. No se
+devuelve el token en JSON ni se guarda en localStorage. Se aplican 30 minutos de
+inactividad, ocho horas máximas y dos sesiones simultáneas por cuenta. Consultar
+`/auth/me` o health no renueva la actividad. Cinco fallos por correo en quince
+minutos bloquean temporalmente nuevos intentos; la verificación costosa de
+contraseñas se limita a una por instancia y puede responder 503 para reintentar.
+
+La sesión obtiene sus permisos actuales de PostgreSQL en cada petición. La
+administración de cuentas, los guardas de permisos de esas operaciones y los
+enlaces de activación/recuperación pertenecen al bloque siguiente.
+
+## Cliente web y despliegue de este bloque
+
+En el frontend local usa `VITE_API_URL=/api`. Vite reenvía `/api/*` al backend
+local `http://localhost:3000/*`. Reinicia Vite después de editar su entorno.
+
+En Render, en el **Static Site** del frontend:
+
+1. Cambia `VITE_API_URL` a `/api`.
+2. Añade una regla **Rewrite** con Source `/api/*` y Destination
+   `https://gabinete-api-dev.onrender.com/*`, antes de cualquier regla `/*`.
+3. Reconstruye y despliega el frontend. La URL de Vite se integra en la compilación.
+
+En el Web Service del backend conserva `NODE_ENV=production` y configura
+`CORS_ORIGINS` con `https://gabinete-web-dev.onrender.com` y, para el desarrollo
+local, `http://localhost:5173,http://127.0.0.1:5173`. Esa lista explícita también
+se utiliza como lista de orígenes de confianza de la protección CSRF de NestJS.
+No añadas `MIGRATION_DATABASE_URL` ni una conexión de propietario a Render.
+
+Después de aplicar la migración y desplegar ambos servicios, verifica desde el
+frontend: ingresar con el administrador, recargar la página conservando la sesión,
+salir y comprobar que ya no aparece la identidad. Verifica en las herramientas del
+navegador que la cookie tiene HttpOnly y Secure. El proxy desplegado y esa prueba
+en navegador siguen pendientes hasta efectuar estos pasos en Render.
+
+Las pruebas unitarias, HTTP y PostgreSQL cubren credenciales inválidas, caducidad,
+revocación, permisos vigentes, CSRF, límites, fallo de auditoría con rollback y
+actualización de una instalación que ya tiene administrador. Las pruebas del
+formulario usan Testing Library y Happy DOM como dependencias de desarrollo.
+No acceden a Neon ni necesitan una contraseña real.
 
 ## Project setup
 

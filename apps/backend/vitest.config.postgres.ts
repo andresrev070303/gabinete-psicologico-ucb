@@ -8,7 +8,8 @@ export default defineConfig({
   root: backendRoot,
   resolve: { tsconfigPaths: true },
   test: {
-    include: ['test/identity-bootstrap.postgres.test.mjs'],
+    include: ['test/*.postgres.test.mjs'],
+    exclude: ['test/audited-transaction.postgres.test.mjs'],
     fileParallelism: false,
     hookTimeout: 30000,
     testTimeout: 30000,

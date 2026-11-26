@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
+import { configureApplication } from './configure-application.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,11 +13,7 @@ async function bootstrap() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  if (allowedOrigins.length === 0) {
-    throw new Error('CORS_ORIGINS must contain at least one origin.');
-  }
-
-  app.enableCors({ origin: allowedOrigins });
+  configureApplication(app, allowedOrigins);
   app.enableShutdownHooks();
 
   const port = Number(config.get<string>('PORT', '3000'));

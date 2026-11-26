@@ -29,6 +29,7 @@ export const core = pgSchema("core");
 export const authSessionInIam = iam.table("auth_session", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	accountId: uuid("account_id").notNull(),
+	sessionKind: varchar("session_kind", { length: 30 }).default('interactive').notNull(),
 	// TODO: failed to parse database type 'bytea'
 	tokenHash: bytea("token_hash").notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
@@ -52,6 +53,26 @@ export const authSessionInIam = iam.table("auth_session", {
 	check("auth_session_check1", sql`(last_seen_at IS NULL) OR (last_seen_at >= created_at)`),
 	check("auth_session_check2", sql`(revoked_at IS NULL) OR (revoked_at >= created_at)`),
 	check("auth_session_token_hash_check", sql`octet_length(token_hash) = 32`),
+	check("auth_session_kind_check", sql`session_kind IN ('interactive','account_activation','password_reset')`),
+	check("action_session_is_closed", sql`session_kind='interactive' OR revoked_at IS NOT NULL`),
+]);
+
+export const securityEventInAudit = audit.table('security_event', {
+  id: bigint({ mode: 'bigint' }).primaryKey().generatedAlwaysAsIdentity({ name: 'audit.security_event_id_seq' }),
+  occurredAt: timestamp('occurred_at', { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
+  requestId: uuid('request_id').notNull(),
+  eventType: varchar('event_type', { length: 30 }).notNull(),
+  subjectHash: bytea('subject_hash').notNull(),
+  actorAccountId: uuid('actor_account_id'),
+  authSessionId: uuid('auth_session_id'),
+}, (table): PgTableExtraConfigValue[] => [
+  index('security_subject_failure_idx').on(table.subjectHash, table.occurredAt.desc()).where(sql`event_type='sign_in_failed'`),
+  index('security_actor_time_idx').on(table.actorAccountId, table.occurredAt.desc()),
+  foreignKey({ columns: [table.actorAccountId], foreignColumns: [accountInIam.id], name: 'security_event_actor_account_id_fkey' }).onDelete('restrict'),
+  foreignKey({ columns: [table.authSessionId, table.actorAccountId], foreignColumns: [authSessionInIam.id, authSessionInIam.accountId], name: 'security_session_owner' }).onDelete('restrict'),
+  check('security_event_event_type_check', sql`event_type IN ('sign_in_succeeded','sign_in_failed','sign_in_throttled','sign_out_succeeded')`),
+  check('security_event_subject_hash_check', sql`octet_length(subject_hash)=32`),
+  check('security_actor_check', sql`(event_type IN ('sign_in_failed','sign_in_throttled') AND actor_account_id IS NULL AND auth_session_id IS NULL) OR (event_type IN ('sign_in_succeeded','sign_out_succeeded') AND actor_account_id IS NOT NULL AND auth_session_id IS NOT NULL)`),
 ]);
 
 export const accountInIam = iam.table("account", {
