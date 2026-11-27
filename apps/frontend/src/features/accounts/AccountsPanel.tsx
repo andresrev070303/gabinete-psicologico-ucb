@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { AuthenticatedIdentity } from '../auth/auth.types';
 import { listAccounts, inviteDirector, assignDirector } from './accounts.api';
+import { inviteOperational } from './account-lifecycle.api';
+import { OperationalRoleFields } from './OperationalRoleFields';
+import { selectedRoles } from './operational-roles';
+import { InvitationResult } from './InvitationResult';
+import { AccountEditor } from './AccountEditor';
 import type {
   AccountPage,
   AccountSummary,
@@ -18,6 +23,7 @@ export function AccountsPanel({
   const [error, setError] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<DirectorInvitation | null>(null);
   const [selected, setSelected] = useState<AccountSummary | null>(null);
+  const [managed, setManaged] = useState<AccountSummary | null>(null);
   const active = useRef<AbortController | null>(null);
   const fail = (failure: unknown) =>
     setError(
@@ -76,14 +82,17 @@ export function AccountsPanel({
     setError(null);
     setInvitation(null);
     try {
-      const result = await inviteDirector(
-        {
-          givenNames: String(data.get('givenNames') ?? ''),
-          familyNames: String(data.get('familyNames') ?? ''),
-          email: String(data.get('email') ?? ''),
-        },
-        controller.signal,
-      );
+      const input = {
+        givenNames: String(data.get('givenNames') ?? ''),
+        familyNames: String(data.get('familyNames') ?? ''),
+        email: String(data.get('email') ?? ''),
+      };
+      const result = canInviteOperational
+        ? await inviteOperational(
+            { ...input, roleCodes: selectedRoles(data) },
+            controller.signal,
+          )
+        : await inviteDirector(input, controller.signal);
       if (!controller.signal.aborted) {
         setInvitation(result);
         form.reset();
@@ -113,15 +122,16 @@ export function AccountsPanel({
       if (!controller.signal.aborted) setBusy(false);
     }
   }
-  const canInvite =
+  const canInviteDirector =
     identity.roles.includes('administrator') &&
     identity.permissions.includes('accounts.invite_director_candidate');
+  const canInviteOperational =
+    identity.roles.includes('director') &&
+    identity.permissions.includes('accounts.invite_operational');
+  const canInvite = canInviteDirector || canInviteOperational;
   const canAssign =
     identity.roles.includes('administrator') &&
     identity.permissions.includes('director.assign');
-  const link = invitation
-    ? `${window.location.origin}/#activate=${encodeURIComponent(invitation.activationToken)}`
-    : '';
   return (
     <section
       className="accounts-panel"
@@ -132,12 +142,20 @@ export function AccountsPanel({
       {error && <p role="alert">{error}</p>}
       {canInvite && (
         <form
-          aria-label="Invite director candidate"
+          aria-label={
+            canInviteOperational
+              ? 'Invite operational account'
+              : 'Invite director candidate'
+          }
           onSubmit={(event) => {
             void invite(event);
           }}
         >
-          <h3>Invite a director candidate</h3>
+          <h3>
+            {canInviteOperational
+              ? 'Invite an operational account'
+              : 'Invite a director candidate'}
+          </h3>
           <label>
             Given names
             <input
@@ -169,28 +187,17 @@ export function AccountsPanel({
               disabled={busy}
             />
           </label>
+          {canInviteOperational && <OperationalRoleFields disabled={busy} />}
           <button type="submit" disabled={busy}>
             Create invitation
           </button>
         </form>
       )}
       {invitation && (
-        <div className="invitation-result" role="status">
-          <p>
-            Deliver this private, one-use link to {invitation.account.email}. It
-            expires in 24 hours and is displayed only after creation.
-          </p>
-          <label>
-            Activation link
-            <input readOnly value={link} />
-          </label>
-          <a href={link} target="_blank" rel="noopener noreferrer">
-            Open activation page
-          </a>
-          <button type="button" onClick={() => setInvitation(null)}>
-            Dismiss link
-          </button>
-        </div>
+        <InvitationResult
+          invitation={invitation}
+          onDismiss={() => setInvitation(null)}
+        />
       )}
       <button
         type="button"
@@ -223,6 +230,21 @@ export function AccountsPanel({
                 <td>{account.status}</td>
                 <td>{account.roles.join(', ') || 'No assigned roles'}</td>
                 <td>
+                  {((account.managementKind === 'operational' &&
+                    identity.roles.includes('director')) ||
+                    (account.managementKind === 'director' &&
+                      identity.roles.includes('administrator'))) && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setManaged(account);
+                        setInvitation(null);
+                      }}
+                    >
+                      Manage account
+                    </button>
+                  )}
                   {canAssign && account.canAssignDirector && (
                     <button
                       type="button"
@@ -265,6 +287,16 @@ export function AccountsPanel({
             Next
           </button>
         </nav>
+      )}
+      {managed && (
+        <AccountEditor
+          key={managed.accountId}
+          account={managed}
+          identity={identity}
+          onChanged={() => load(accounts?.page ?? 1)}
+          onLink={setInvitation}
+          onClose={() => setManaged(null)}
+        />
       )}
       {selected && (
         <fieldset>

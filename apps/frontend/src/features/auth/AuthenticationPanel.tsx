@@ -2,13 +2,14 @@ import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { AuthenticatedIdentity } from './auth.types';
 import { useAuthentication } from './useAuthentication';
+import { OwnAccessPanel } from '../accounts/OwnAccessPanel';
 
 export function AuthenticationPanel({
   children,
 }: {
   children?: (identity: AuthenticatedIdentity['identity']) => ReactNode;
 } = {}) {
-  const { state, authenticate, endSession } = useAuthentication();
+  const { state, authenticate, endSession, clearSession } = useAuthentication();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -51,6 +52,10 @@ export function AuthenticationPanel({
           >
             Sign out
           </button>
+          <OwnAccessPanel
+            key={state.current.session.id}
+            onSessionEnded={clearSession}
+          />
           {children?.(state.current.identity)}
         </>
       ) : (

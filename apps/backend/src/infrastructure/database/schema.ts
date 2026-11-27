@@ -1670,3 +1670,18 @@ export const accountActionTokenInIam = iam.table('account_action_token', {
   check('action_consumption',sql`(consumed_at IS NULL)=(consumed_by_session_id IS NULL) AND (consumed_at IS NULL OR consumed_at>=created_at)`),
   check('action_revocation',sql`revoked_at IS NULL OR (revoked_at>=created_at AND consumed_at IS NULL)`),
 ]);
+
+export const identityEventInAudit = audit.table('identity_event', {
+  id: uuid().defaultRandom().primaryKey().notNull(),
+  occurredAt: timestamp('occurred_at', { withTimezone: true, mode: 'string' }).default(sql`clock_timestamp()`).notNull(),
+  action: varchar({ length: 40 }).notNull(), targetAccountId: uuid('target_account_id').notNull(), actorAccountId: uuid('actor_account_id').notNull(),
+  authSessionId: uuid('auth_session_id').notNull(), requestId: uuid('request_id').notNull(), reason: varchar({ length: 240 }),
+}, (table) => [
+  foreignKey({ columns: [table.targetAccountId], foreignColumns: [accountInIam.id], name: 'identity_event_target_account_id_fkey' }).onDelete('restrict'),
+  foreignKey({ columns: [table.actorAccountId], foreignColumns: [accountInIam.id], name: 'identity_event_actor_account_id_fkey' }).onDelete('restrict'),
+  foreignKey({ columns: [table.authSessionId,table.actorAccountId], foreignColumns: [authSessionInIam.id,authSessionInIam.accountId], name: 'identity_event_session_owner' }).onDelete('restrict'),
+  index('identity_event_target_time_idx').on(table.targetAccountId,table.occurredAt.desc()),
+  index('identity_event_actor_time_idx').on(table.actorAccountId,table.occurredAt.desc()),
+  check('identity_event_action_check',sql`action IN ('operational_invited','profile_updated','roles_changed','account_disabled','account_reinvited','password_reset_issued','account_activation','password_reset','session_revoked','password_changed','password_change_failed','contact_updated')`),
+  check('identity_event_reason',sql`(action='account_disabled' AND length(trim(reason)) BETWEEN 5 AND 240 AND reason IS NOT NULL) OR (action<>'account_disabled' AND reason IS NULL)`),
+]);

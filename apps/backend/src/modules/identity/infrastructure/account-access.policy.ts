@@ -25,6 +25,42 @@ export class AccountAccessPolicy {
   assignDirector(user: PublicIdentity | null): boolean {
     return this.has(user, 'administrator', 'director.assign');
   }
+  inviteOperational(user: PublicIdentity | null) {
+    return this.has(user, 'director', 'accounts.invite_operational');
+  }
+  updateOperational(user: PublicIdentity | null) {
+    return this.has(user, 'director', 'accounts.update_operational');
+  }
+  manageOperationalRoles(user: PublicIdentity | null) {
+    return (
+      this.has(user, 'director', 'roles.assign_operational') &&
+      this.has(user, 'director', 'roles.revoke_operational')
+    );
+  }
+  disableAccount(user: PublicIdentity | null) {
+    return (
+      this.has(user, 'administrator', 'director.disable') ||
+      this.has(user, 'director', 'accounts.disable_operational')
+    );
+  }
+  reinviteAccount(user: PublicIdentity | null) {
+    return (
+      this.has(user, 'administrator', 'director.reinvite') ||
+      this.has(user, 'director', 'accounts.reinvite_operational')
+    );
+  }
+  resetAccount(user: PublicIdentity | null) {
+    return (
+      this.has(user, 'administrator', 'credentials.issue_director_reset') ||
+      this.has(user, 'director', 'credentials.issue_operational_reset')
+    );
+  }
+  readAudit(user: PublicIdentity | null) {
+    return (
+      this.has(user, 'administrator', 'audit.read_identity') ||
+      this.has(user, 'director', 'audit.read_identity')
+    );
+  }
   private has(
     user: PublicIdentity | null,
     role: string,

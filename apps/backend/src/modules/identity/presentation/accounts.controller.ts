@@ -25,15 +25,7 @@ import {
   InviteDirectorPipe,
 } from './account-management.pipes.js';
 import { IdentityExceptionFilter } from './identity-exception.filter.js';
-import { requestId } from './session-cookie.js';
-
-function actor(user: PublicIdentity, session: PublicSession, request: Request) {
-  return {
-    accountId: user.accountId,
-    authSessionId: session.id,
-    requestId: requestId(request),
-  };
-}
+import { identityActor as actor } from './identity-actor.js';
 @Controller('accounts')
 @UseFilters(IdentityExceptionFilter)
 export class AccountsController {

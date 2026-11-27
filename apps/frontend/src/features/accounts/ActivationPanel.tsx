@@ -55,8 +55,8 @@ export function ActivationPanel({
       {complete ? (
         <>
           <p role="status">
-            Your account is active. You can sign in. The administrator assigns
-            the director role separately.
+            Your account is active and your password is set. Sign in to see your
+            assigned access. Director candidates require a separate designation.
           </p>
           <button type="button" onClick={onComplete}>
             Go to sign in

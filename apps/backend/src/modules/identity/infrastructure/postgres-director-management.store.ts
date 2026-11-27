@@ -13,135 +13,49 @@ import type {
   AccountPage,
 } from '../application/account-management.contracts.js';
 import { IdentityOperationError } from '../application/account-management.contracts.js';
+import { canDesignateDirector } from '../domain/director.rules.js';
 import {
-  canDesignateDirector,
-  requiresRecentAuthentication,
-} from '../domain/director.rules.js';
-import type { DirectorCandidate } from '../domain/director.rules.js';
-import { canUseSession } from '../domain/session-policy.js';
-
-type ActorState = {
-  accountId: string;
-  roles: string[];
-  permissions: string[];
-  createdAt: string;
-  expiresAt: string;
-  lastSeenAt: string | null;
-  revokedAt: string | null;
-  sessionKind: string;
-  checkedAt: string;
-};
-type AccountRow = AccountSummary & DirectorCandidate;
+  IdentityTransactions,
+  safely,
+  lockGovernance,
+} from './identity-transactions.js';
+import type { ActorState } from './identity-transactions.js';
+import {
+  accountProjection,
+  summarizeAccount,
+  operationalScope,
+} from './account-queries.js';
+import type { AccountRow } from './account-queries.js';
 
 export class PostgresDirectorManagementStore
   implements DirectorManagementStore, AccountActivationStore
 {
   constructor(private readonly database: AppDatabase) {}
-  private async safely<T>(work: () => Promise<T>): Promise<T> {
-    try {
-      return await work();
-    } catch (error) {
-      if (error instanceof IdentityOperationError) throw error;
-      const cause =
-        error && typeof error === 'object' && 'cause' in error
-          ? error.cause
-          : error;
-      if (
-        cause &&
-        typeof cause === 'object' &&
-        'code' in cause &&
-        cause.code === '23505' &&
-        'constraint' in cause &&
-        cause.constraint === 'account_email_normalized_uq'
-      )
-        throw new IdentityOperationError('email_conflict');
-      throw new IdentityOperationError('unavailable');
-    }
-  }
+  private safely = safely;
+  private lockGovernance = lockGovernance;
   private transaction<T>(
     actor: IdentityActor,
     permission: string,
     mutation: boolean,
-    work: (tx: AppTransaction, actor: ActorState) => Promise<T>,
+    work: (tx: AppTransaction, state: ActorState) => Promise<T>,
   ): Promise<T> {
-    return this.safely(() =>
-      this.database.transaction(async (tx) => {
-        if (mutation) await this.lockGovernance(tx);
-        // Lock the actor before its sessions, consistently with login and logout.
-        await tx.execute(
-          sql`SELECT id FROM iam.account WHERE id=${actor.accountId}::uuid FOR UPDATE`,
-        );
-        const state = await this.authorize(tx, actor, permission, mutation);
-        await tx.execute(
-          sql`SELECT audit.set_request_context(${actor.accountId}::uuid,${actor.authSessionId}::uuid,${actor.requestId}::uuid)`,
-        );
-        return work(tx, state);
-      }),
+    return new IdentityTransactions(this.database).run(
+      actor,
+      {
+        permission,
+        mutation,
+        roles: mutation ? ['administrator'] : ['administrator', 'director'],
+      },
+      work,
     );
   }
-  private lockGovernance(tx: AppTransaction) {
-    return tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtextextended('gabinete.identity.administration',0))`,
-    );
-  }
-  private async authorize(
-    tx: AppTransaction,
-    actor: IdentityActor,
-    permission: string,
-    recent: boolean,
-  ): Promise<ActorState> {
-    const result =
-      await tx.execute<ActorState>(sql`SELECT a.id AS "accountId",s.created_at::text AS "createdAt",s.expires_at::text AS "expiresAt",
-      s.last_seen_at::text AS "lastSeenAt",s.revoked_at::text AS "revokedAt",s.session_kind AS "sessionKind",clock_timestamp()::text AS "checkedAt",
-      ARRAY(SELECT r.code FROM iam.account_role ar JOIN iam.role r ON r.id=ar.role_id WHERE ar.account_id=a.id AND ar.revoked_at IS NULL AND r.active) AS roles,
-      ARRAY(SELECT permission_code FROM iam.v_effective_permission WHERE account_id=a.id) AS permissions
-      FROM iam.account a JOIN core.person p ON p.id=a.person_id JOIN iam.auth_session s ON s.account_id=a.id
-      WHERE a.id=${actor.accountId}::uuid AND s.id=${actor.authSessionId}::uuid AND a.account_status='active' AND p.active AND NOT a.mfa_enabled`);
-    const state = result.rows[0];
-    if (
-      !state ||
-      !canUseSession(state, Date.parse(state.checkedAt)) ||
-      !state.permissions.includes(permission) ||
-      !(
-        state.roles.includes('administrator') ||
-        (!recent && state.roles.includes('director'))
-      )
-    )
-      throw new IdentityOperationError('forbidden');
-    if (
-      recent &&
-      requiresRecentAuthentication(
-        Date.parse(state.createdAt),
-        Date.parse(state.checkedAt),
-      )
-    )
-      throw new IdentityOperationError('reauthentication_required');
-    return state;
-  }
-  private projection() {
-    return sql`SELECT a.id AS "accountId",a.email,a.account_status AS status,p.given_names AS "givenNames",p.family_names AS "familyNames",p.active AS "personActive",
-      ARRAY(SELECT r.code FROM iam.account_role ar JOIN iam.role r ON r.id=ar.role_id WHERE ar.account_id=a.id ORDER BY ar.granted_at) AS "roleHistory",
-      ARRAY(SELECT r.code FROM iam.account_role ar JOIN iam.role r ON r.id=ar.role_id WHERE ar.account_id=a.id AND ar.revoked_at IS NULL AND r.active ORDER BY r.code) AS roles,
-      EXISTS(SELECT 1 FROM iam.account_action_token t WHERE t.account_id=a.id AND t.purpose='director_activation' AND t.consumed_at IS NOT NULL) AS "activatedCandidate"
-      FROM iam.account a JOIN core.person p ON p.id=a.person_id`;
-  }
+  private projection = accountProjection;
   private summary(
     row: AccountRow,
     actorId: string,
     administrator: boolean,
   ): AccountSummary {
-    return {
-      accountId: row.accountId,
-      email: row.email,
-      givenNames: row.givenNames,
-      familyNames: row.familyNames,
-      status: row.status,
-      roles: row.roles,
-      canAssignDirector:
-        administrator &&
-        !row.roles.includes('director') &&
-        canDesignateDirector(actorId, row),
-    };
+    return summarizeAccount(row, actorId, administrator);
   }
   list(
     actor: IdentityActor,
@@ -156,9 +70,7 @@ export class PostgresDirectorManagementStore
         const administrator = state.roles.includes('administrator');
         const scope = administrator
           ? sql`true`
-          : sql`a.id<>${actor.accountId}::uuid
-        AND EXISTS(SELECT 1 FROM iam.account_role ar JOIN iam.role r ON r.id=ar.role_id WHERE ar.account_id=a.id AND r.code IN ('psychologist','assistant','degree_student'))
-        AND NOT EXISTS(SELECT 1 FROM iam.account_role ar JOIN iam.role r ON r.id=ar.role_id WHERE ar.account_id=a.id AND r.code IN ('administrator','director'))`;
+          : operationalScope(actor.accountId);
         const rows = await tx.execute<AccountRow>(
           sql`${this.projection()} WHERE ${scope} ORDER BY a.created_at DESC,a.id DESC LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
         );
@@ -252,9 +164,9 @@ export class PostgresDirectorManagementStore
     });
   }
   private pending(hash: Buffer) {
-    return sql`SELECT t.id,t.account_id AS "accountId" FROM iam.account_action_token t JOIN iam.account a ON a.id=t.account_id JOIN core.person p ON p.id=a.person_id
-      WHERE t.token_hash=${hash} AND t.purpose='director_activation' AND t.consumed_at IS NULL AND t.revoked_at IS NULL AND t.expires_at>clock_timestamp()
-        AND a.account_status='invited' AND a.auth_method='local' AND p.active AND NOT a.mfa_enabled`;
+    return sql`SELECT t.id,t.account_id AS "accountId",t.purpose FROM iam.account_action_token t JOIN iam.account a ON a.id=t.account_id JOIN core.person p ON p.id=a.person_id
+      WHERE t.token_hash=${hash} AND ((t.purpose IN ('director_activation','operational_activation') AND a.account_status='invited') OR (t.purpose='password_reset' AND a.account_status='active')) AND t.consumed_at IS NULL AND t.revoked_at IS NULL AND t.expires_at>clock_timestamp()
+        AND a.auth_method='local' AND p.active AND NOT a.mfa_enabled`;
   }
   isPendingActivation(hash: Buffer): Promise<boolean> {
     return this.safely(
@@ -271,12 +183,16 @@ export class PostgresDirectorManagementStore
       this.database.transaction(async (tx) => {
         await this.lockGovernance(tx);
         const token = (
-          await tx.execute<{ id: string; accountId: string }>(
+          await tx.execute<{ id: string; accountId: string; purpose: string }>(
             sql`${this.pending(hash)} FOR UPDATE OF t,a`,
           )
         ).rows[0];
         if (!token) throw new IdentityOperationError('invalid_activation');
         const sessionId = randomUUID();
+        const sessionKind =
+          token.purpose === 'password_reset'
+            ? 'password_reset'
+            : 'account_activation';
         await tx.execute(
           sql`SELECT audit.set_request_context(${token.accountId}::uuid,${sessionId}::uuid,${requestId}::uuid)`,
         );
@@ -284,9 +200,14 @@ export class PostgresDirectorManagementStore
           .update(randomBytes(32))
           .digest();
         await tx.execute(sql`WITH instant AS(SELECT clock_timestamp() AS at) INSERT INTO iam.auth_session(id,account_id,token_hash,session_kind,created_at,expires_at,revoked_at,revocation_reason)
-        SELECT ${sessionId}::uuid,${token.accountId}::uuid,${closedHash},'account_activation',at,at+interval '1 second',at,'action_only' FROM instant`);
+        SELECT ${sessionId}::uuid,${token.accountId}::uuid,${closedHash},${sessionKind},at,at+interval '1 second',at,'action_only' FROM instant`);
         await tx.execute(
           sql`UPDATE iam.account SET password_hash=${passwordHash},account_status='active' WHERE id=${token.accountId}::uuid`,
+        );
+        await tx.execute(sql`UPDATE iam.auth_session SET revoked_at=clock_timestamp(),revocation_reason='credentials_changed'
+          WHERE account_id=${token.accountId}::uuid AND session_kind='interactive' AND revoked_at IS NULL`);
+        await tx.execute(
+          sql`SELECT audit.record_identity_event(${sessionKind},${token.accountId}::uuid,NULL)`,
         );
         const consumed = await tx.execute(
           sql`UPDATE iam.account_action_token SET consumed_at=clock_timestamp(),consumed_by_session_id=${sessionId}::uuid WHERE id=${token.id}::uuid AND expires_at>clock_timestamp() RETURNING id`,

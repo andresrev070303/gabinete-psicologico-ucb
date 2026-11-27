@@ -229,15 +229,15 @@
   padding: 0.5rem;
   min-width: 0;
 }
-.accounts-panel .accounts-table {
+.accounts-table {
   overflow-x: auto;
 }
-.accounts-panel table {
+.accounts-table table {
   width: 100%;
   border-collapse: collapse;
 }
-.accounts-panel th,
-.accounts-panel td {
+.accounts-table th,
+.accounts-table td {
   text-align: left;
   padding: 0.6rem;
   border-bottom: 1px solid var(--border);
@@ -250,4 +250,24 @@
 }
 .authentication-panel--signed-in {
   max-width: 64rem;
+}
+.own-access-panel,
+.identity-audit-panel {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.own-access-panel form {
+  margin: 1rem 0;
+}
+.own-access-panel label {
+  display: grid;
+  gap: 0.4rem;
+}
+.accounts-panel label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+}
+.accounts-table td {
+  overflow-wrap: anywhere;
 }

@@ -29,59 +29,145 @@ con capas internas y API REST sobre HTTPS. El código de identidad se organiza e
 
 ## Estado y siguiente paso en development
 
-El Administrador y el catálogo ya están instalados. El usuario confirmó el ingreso,
-la conservación de la sesión al recargar y la salida en local. Para continuar con
-la habilitación del Director, aplica la migración incremental con `npm run db:migrate`
-desde `apps/backend`, usando `.env.migrations` con el propietario y pooling OFF.
-La conexión web de `.env` conserva `gabinete_app` y pooling ON.
+El usuario confirmó la habilitación del Director. Este bloque completa la gestión
+operativa de Psicólogos, Auxiliares y Estudiantes de Titulación, la administración
+del propio acceso y la consulta de auditoría de identidad.
 
-La nueva migración `0002_director_activation.sql` agrega enlaces de un solo uso,
-auditoría de sus cambios, privilegios para las operaciones nuevas y un control
-que impide dos concesiones vigentes del rol Director. No crea cuentas ni cambia
-el catálogo. El asistente la comprobó con PostgreSQL local temporal y no la ejecutó
-en Neon. No repitas `identity:bootstrap` para actualizar una instalación existente.
+Desde `apps/backend`, ejecuta `npm run db:migrate` con la conexión de propietario
+directa, pooling OFF y `sslmode=verify-full` en `.env.migrations`. La migración nueva
+es `0003_identity_lifecycle.sql`: añade auditoría semántica de identidad y concede
+los privilegios correspondientes al rol de ejecución. Conserva las cuentas y el
+catálogo. El backend sigue con `gabinete_app` y pooling ON. No repitas el bootstrap.
 
-Después de migrar, reinicia backend y frontend y realiza este recorrido con datos
-ficticios en `http://localhost:5173`:
-
-1. Ingresa como Administrador. Si el acceso tiene diez minutos o más, vuelve a
-   autenticarte antes de invitar o designar: recargar no verifica la contraseña.
-2. En **Accounts**, completa **Invite a director candidate** y crea la invitación.
-3. Conserva el enlace que se muestra y entrégalo manualmente al destinatario para
-   las pruebas. Tiene 24 horas de vigencia y se devuelve sólo al crearlo; no se
-   guarda como texto en la base ni se recupera desde el listado.
-4. Abre el enlace en una ventana privada para representar al candidato. Establece
-   y confirma su contraseña de 15 a 128 caracteres. La activación es de un solo uso
-   y no inicia sesión ni concede el rol Director automáticamente.
-5. En la ventana del Administrador, pulsa **Refresh accounts**, selecciona
-   **Assign director** en la cuenta activada y confirma expresamente.
-6. Ingresa con la nueva cuenta en la ventana privada. Debe mostrar `director`.
-   Designar un reemplazo revoca las sesiones del Director anterior y del nuevo;
-   las cuentas y las concesiones previas se conservan como historial.
-
-El fragmento `#activate=...` se retira del historial antes de montar React y el
-secreto se envía en el cuerpo de `POST /auth/activations`. Un GET no consume el enlace.
-La entrega manual corresponde a pruebas con datos ficticios; no se incorporó un
-proveedor de correo. El Administrador no elige ni obtiene la contraseña del candidato.
-
-Puedes comprobar el esquema y la dirección vigente sin consultar credenciales:
+El asistente sólo probó las migraciones con PostgreSQL temporal local. Aplicarlas
+en Neon y desplegar el código siguen siendo acciones del usuario. Verifica:
 
 ```sql
-SELECT to_regclass('iam.account_action_token')::text AS action_tokens;
-
-SELECT a.email, r.code
-FROM iam.account_role ar
-JOIN iam.account a ON a.id = ar.account_id
-JOIN iam.role r ON r.id = ar.role_id
-WHERE r.code = 'director' AND ar.revoked_at IS NULL;
+SELECT to_regclass('audit.identity_event')::text AS identity_events;
+SELECT count(*) AS applied_migrations FROM drizzle.__drizzle_migrations;
 ```
 
-Antes de designar, la segunda consulta devuelve cero filas. Después devuelve una.
-El candidato no es la propia cuenta administradora ni una cuenta con historial
-operativo: la primera designación utiliza una cuenta nueva invitada expresamente.
+Los resultados esperados tras esta versión son `audit.identity_event` y cuatro
+migraciones. Los catálogos siguen con cinco roles, 15 permisos y 18 concesiones;
+el número de cuentas aumenta al crear personas del equipo.
 
-La administración de cuentas operativas, bajas, reincorporación, recuperación de
-contraseñas, sesiones propias y pantalla de auditoría continúa pendiente.
+Reinicia ambos procesos y prueba con datos ficticios:
+
+1. Ingresa como Director. Para administrar accesos, la contraseña debe haberse
+   verificado hace menos de diez minutos; vuelve a ingresar si es necesario.
+2. En **Accounts / Invite an operational account**, registra nombre, apellidos,
+   correo y los roles operativos elegidos expresamente.
+3. Con el modo manual predeterminado, abre el enlace en otro perfil de navegador
+   sin una sesión previa. Establece la contraseña del destinatario y luego ingresa
+   con su correo. La invitación dura 24 horas y sólo admite una activación.
+4. Comprueba que un Psicólogo puede gestionar su propio acceso, pero no listar
+   cuentas ajenas. Repite para Auxiliar y Titulación.
+5. Con el Director, usa **Manage account** para corregir nombres/teléfono, cambiar
+   roles, emitir recuperación, deshabilitar o reincorporar. El correo de acceso no
+   se modifica en este primer módulo. La baja pide motivo y conserva el historial.
+6. Al cambiar roles o deshabilitar, las sesiones anteriores dejan de autorizar.
+   Reincorporar exige roles nuevos y otra activación; no revive concesiones previas.
+7. En cualquier cuenta, abre **Manage my access**: cambia el teléfono, consulta o
+   revoca sesiones propias y cambia la contraseña demostrando la actual. El cambio
+   revoca todas las sesiones y vuelve a la pantalla de ingreso.
+8. Director y Administrador pueden abrir **Show identity audit**. El Director ve
+   cuentas operativas administrables y sus propias acciones; el Administrador ve
+   identidad. Sólo se muestran metadatos, campos modificados y motivos, nunca sus
+   valores anteriores, contraseñas, hashes ni secretos. El UUID de sesión es un
+   identificador de atribución, no una credencial.
+
+El Administrador conserva las operaciones especiales sobre candidatos y Directores:
+invitación sin rol, activación, designación explícita, suspensión, recuperación y
+reincorporación. Activar o reincorporar un candidato no lo designa Director.
+Sólo puede existir una concesión directiva vigente. El Director no controla cuentas
+que tengan historial de Administrador o Director, ni su propia cuenta.
+
+## Correo desde Gmail mediante HTTPS
+
+Remitente confirmado: **gabinetepsicologicoucb@gmail.com**. La integración está
+implementada; el envío real requiere autorización OAuth de esa cuenta. Las pruebas
+usan respuestas simuladas y no envían correos. No se incorpora un proveedor de pago.
+
+El backend admite dos modos mediante `IDENTITY_EMAIL_MODE`:
+
+- `manual` (predeterminado para las pruebas): devuelve el enlace una sola vez al
+  operador autorizado. No contacta a Google ni requiere secretos de correo.
+- `gmail`: envía mediante Gmail API por HTTPS, después del commit. El enlace no se
+  devuelve ni se muestra al operador, incluso si falla el proveedor. La respuesta
+  distingue envío aceptado y fallo; un fallo conserva la cuenta pendiente y permite
+  emitir otro enlace tras revisar la configuración. No hay reintentos automáticos
+  que puedan duplicar un envío de resultado incierto.
+
+Gmail aceptando un mensaje no garantiza su llegada a la bandeja principal; comprueba
+el buzón y spam durante la aceptación. Las recuperaciones duran una hora y las
+invitaciones 24 horas. Reemitir revoca el enlace anterior. La recuperación no inicia
+sesión automáticamente y revoca las sesiones existentes al confirmar la contraseña.
+
+Configuración manual del remitente, sin compartir secretos en el chat:
+
+1. Con la cuenta remitente, crea un proyecto propio en Google Cloud Console y
+   habilita **Gmail API**. No habilites facturación, pruebas de pago ni servicios
+   adicionales para seguir estos pasos.
+2. Configura Google Auth Platform / OAuth para el proyecto de desarrollo. Si usas
+   audiencia **External / Testing**, añade únicamente el remitente como test user.
+   Los destinatarios del Gabinete no necesitan autorizar Google: sólo el remitente.
+3. Solicita únicamente `https://www.googleapis.com/auth/gmail.send`. No se necesita
+   leer el correo ni acceder a toda la cuenta de Gmail.
+4. Crea un cliente OAuth de tipo **Web application** y registra como redirect URI
+   `https://developers.google.com/oauthplayground`.
+5. En el OAuth Playground oficial, abre la configuración, selecciona **Google**,
+   **Server-side**, **Offline** y **Use your own OAuth credentials**. Introduce tu
+   client ID y client secret allí, sin enviarlos al chat. Usar credenciales propias
+   evita la revocación de 24 horas de los tokens del cliente público del Playground.
+6. Autoriza sólo el scope del paso 3 con la cuenta remitente. Intercambia el código
+   y copia el **refresh token** directamente al entorno privado del backend.
+7. Usa `identity-email.env.example` como plantilla. En el backend local y luego en
+   Render configura `GMAIL_SENDER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`,
+   `GMAIL_REFRESH_TOKEN` e `IDENTITY_PUBLIC_URL`. Para Render, esta última es
+   `https://gabinete-web-dev.onrender.com/`. Para una prueba local puede ser
+   `http://localhost:5173/`, que sólo abre en la máquina del destinatario.
+8. Cambia `IDENTITY_EMAIL_MODE=gmail`, reinicia el backend y crea una invitación
+   ficticia hacia un buzón de pruebas bajo tu control. Verifica recepción, vencimiento,
+   activación de un solo uso y que la pantalla del operador no contiene el enlace.
+
+En **External / Testing**, Google hace caducar el refresh token a los siete días
+para este scope. Si deja de funcionar, autoriza otra vez y reemplázalo; no lo
+confundas con el vencimiento de una invitación. Antes de uso institucional continuo,
+configura la publicación y verificación aplicables a la audiencia. Google documenta
+excepciones para audiencia limitada y un modo Personal restringido al creador;
+Personal es una elección irreversible y no debe elegirse sin considerar la futura
+transferencia institucional del remitente.
+
+El correo usa un adaptador pequeño de Gmail API con `fetch` y OAuth; se revisó el
+paquete oficial de correo de NestJS, cuyos transportes documentados no incluyen
+Gmail API. No se añade una dependencia sólo para envolver este adaptador.
+
+Fuentes: [restricciones de SMTP en Render Free](https://render.com/docs/free),
+[envío Gmail API](https://developers.google.com/workspace/gmail/api/guides/sending),
+[scopes](https://developers.google.com/workspace/gmail/api/auth/scopes),
+[OAuth Playground](https://developers.google.com/oauthplayground/),
+[caducidad de refresh tokens](https://developers.google.com/identity/protocols/oauth2#expiration),
+[audiencia y excepciones](https://support.google.com/cloud/answer/13464323?hl=en).
+
+## Arquitectura y decisiones de implementación
+
+Se conserva el monolito modular por dominios con capas internas. `presentation`
+valida HTTP y aplica políticas explícitas; `application` coordina casos de uso
+mediante contratos; `domain` contiene las reglas puras de roles y alcance;
+`infrastructure` implementa transacciones PostgreSQL y la entrega por Gmail.
+React consume REST/HTTPS; la llamada externa a Gmail usa HTTPS y no convierte
+los módulos del backend en servicios distribuidos.
+
+La inyección de dependencias permite sustituir repositorio y entrega en pruebas.
+El adaptador de correo mantiene las reglas de cuentas independientes del proveedor.
+Las políticas verifican permiso, propiedad, estado e historial. Las mutaciones
+administrativas se serializan con el bloqueo compartido ya existente y revalidan
+sesión, rol y permisos dentro de la transacción auditada. No se añaden colas ni JWT.
+
+La recuperación de emergencia del Administrador queda bajo custodia del propietario
+institucional de la base; no se añade una ruta web para elevar, eliminar o recuperar
+al Administrador desde otra cuenta. Antes de entregar el sistema debe documentarse
+y ensayarse ese procedimiento de emergencia con el custodio.
 
 ## Instalación inicial en una base vacía
 
@@ -130,9 +216,9 @@ En GitHub, `npm run test:db:ci` utiliza exclusivamente el contenedor PostgreSQL 
 workflow y `TEST_DATABASE_URL`. Nunca lee la conexión de Neon. La cobertura de estas
 pruebas se publica en `coverage/postgres/lcov.info` y se importa en SonarCloud.
 
-Las pruebas cubren autenticación, invitación, activación, designación y sustitución,
-autorización por permisos, cuentas protegidas, concurrencia y rollback. Continúan
-pendientes los flujos de administración operativa y recuperación de acceso.
+Las pruebas cubren habilitación directiva, gestión operativa, recuperación,
+sesiones propias, auditoría con alcance, concurrencia y rollback. La entrega Gmail
+se prueba con HTTP simulado; falta autorizar el remitente y probar la recepción real.
 
 ## Autenticación y migración incremental
 
@@ -173,6 +259,18 @@ Endpoints implementados:
 | `POST /accounts/director-invitations` | Crea una cuenta pendiente y un enlace de activación; exige permiso y autenticación reciente del Administrador. |
 | `POST /auth/activations` | Establece la contraseña y consume el enlace atómicamente; 204 sin cookie de navegación. |
 | `POST /accounts/:id/director-assignment` | Designa o sustituye al Director con historial y revocación de sesiones; 204. |
+| `POST /accounts/operational-invitations` | Invita personal con roles operativos predefinidos; 201. |
+| `PATCH /accounts/:id/profile` | Corrige nombres y teléfono dentro del alcance; 204. |
+| `PUT /accounts/:id/roles` | Reemplaza expresamente los roles operativos y revoca sesiones; 204. |
+| `POST /accounts/:id/disable` | Baja lógica con motivo, revocación de sesiones, roles y enlaces; 204. |
+| `POST /accounts/:id/reinvitations` | Nuevo enlace y roles seleccionados; no revive accesos; 201. |
+| `POST /accounts/:id/password-reset-invitations` | Recuperación de un solo uso dentro del alcance; 201. |
+| `GET /auth/sessions` | Sólo sesiones interactivas propias todavía utilizables. |
+| `POST /auth/sessions/:id/revocations` | Revoca una sesión propia; 204. |
+| `POST /auth/password-change` | Verifica la contraseña actual, cambia y revoca sesiones; 204. |
+| `GET, PUT /auth/contact` | Lee o actualiza sólo el teléfono propio. |
+| `GET /identity-audit` | Metadatos de identidad paginados con alcance aplicado en SQL. |
+
 
 La credencial aleatoria se almacena como SHA-256 en PostgreSQL. El UUID de sesión
 es sólo un identificador de auditoría. La cookie usa `Secure` y prefijo `__Host-`

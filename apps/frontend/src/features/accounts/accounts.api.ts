@@ -6,7 +6,7 @@ import type {
   InviteDirectorInput,
 } from './accounts.types';
 
-function record(value: unknown): value is Record<string, unknown> {
+export function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 function account(value: unknown): value is AccountSummary {
@@ -20,7 +20,7 @@ function account(value: unknown): value is AccountSummary {
     typeof value.canAssignDirector === 'boolean'
   );
 }
-async function check(response: Response): Promise<void> {
+export async function check(response: Response): Promise<void> {
   if (response.ok) return;
   if (response.status === 401)
     throw new Error('Your session has expired. Sign out and sign in again.');
@@ -36,6 +36,10 @@ async function check(response: Response): Promise<void> {
     invalid_candidate: 'Select an activated director candidate.',
     invalid_activation:
       'The activation link is invalid, expired or already used.',
+    invalid_state:
+      'This operation is not available for the current account state.',
+    invalid_password: 'The current password is incorrect.',
+    rate_limited: 'Too many attempts. Try again in 15 minutes.',
   };
   if (
     record(body) &&
@@ -71,8 +75,23 @@ export async function inviteDirector(
   input: InviteDirectorInput,
   signal: AbortSignal,
 ): Promise<DirectorInvitation> {
+  return createAccessLink('accounts/director-invitations', input, signal);
+}
+function validInvitationToken(body: Record<string, unknown>): boolean {
+  if (body.delivery === 'sent' || body.delivery === 'failed')
+    return body.activationToken === undefined;
+  return (
+    typeof body.activationToken === 'string' &&
+    /^[A-Za-z0-9_-]{43}$/u.test(body.activationToken)
+  );
+}
+export async function createAccessLink(
+  path: string,
+  input: unknown,
+  signal: AbortSignal,
+): Promise<DirectorInvitation> {
   const response = await apiRequest(
-    'accounts/director-invitations',
+    path,
     { method: 'POST', body: JSON.stringify(input) },
     signal,
   );
@@ -81,10 +100,11 @@ export async function inviteDirector(
   if (
     !record(body) ||
     !account(body.account) ||
-    typeof body.activationToken !== 'string' ||
-    !/^[A-Za-z0-9_-]{43}$/u.test(body.activationToken) ||
+    !validInvitationToken(body) ||
     typeof body.expiresAt !== 'string' ||
-    !Number.isFinite(Date.parse(body.expiresAt))
+    !Number.isFinite(Date.parse(body.expiresAt)) ||
+    (body.delivery !== undefined &&
+      !['manual', 'sent', 'failed'].includes(String(body.delivery)))
   )
     throw new Error('The API returned an unexpected invitation.');
   return body as DirectorInvitation;

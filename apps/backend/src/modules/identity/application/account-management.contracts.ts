@@ -17,6 +17,8 @@ export type AccountSummary = Readonly<{
   status: string;
   roles: readonly string[];
   canAssignDirector: boolean;
+  contactPhone?: string | null;
+  managementKind?: 'director' | 'operational' | null;
 }>;
 export type AccountPage = Readonly<{
   items: readonly AccountSummary[];
@@ -55,6 +57,9 @@ export class IdentityOperationError extends Error {
       | 'email_conflict'
       | 'invalid_candidate'
       | 'invalid_activation'
+      | 'invalid_state'
+      | 'invalid_password'
+      | 'rate_limited'
       | 'reauthentication_required'
       | 'unavailable',
   ) {
@@ -66,6 +71,10 @@ export class IdentityOperationError extends Error {
         'Select an activated director candidate without incompatible role history.',
       invalid_activation:
         'The activation link is invalid, expired or already used.',
+      invalid_state:
+        'This operation is not available for the current account state.',
+      invalid_password: 'The current password is incorrect.',
+      rate_limited: 'Too many attempts. Try again in 15 minutes.',
       reauthentication_required:
         'Sign out and sign in again before changing account access.',
       unavailable: 'Account management is temporarily unavailable.',

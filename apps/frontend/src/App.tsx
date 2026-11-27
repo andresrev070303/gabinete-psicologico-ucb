@@ -4,6 +4,7 @@ import './App.css';
 import { useState } from 'react';
 import { ActivationPanel } from './features/accounts/ActivationPanel';
 import { AccountsPanel } from './features/accounts/AccountsPanel';
+import { IdentityAuditPanel } from './features/accounts/IdentityAuditPanel';
 
 const statusMessages = {
   idle: 'Ready to check the connection.',
@@ -30,11 +31,16 @@ export default function App({
         <ActivationPanel token={token} onComplete={() => setToken(null)} />
       ) : (
         <AuthenticationPanel>
-          {(identity) =>
-            identity.permissions.includes('accounts.read') && (
-              <AccountsPanel key={identity.accountId} identity={identity} />
-            )
-          }
+          {(identity) => (
+            <>
+              {identity.permissions.includes('accounts.read') && (
+                <AccountsPanel key={identity.accountId} identity={identity} />
+              )}
+              {identity.permissions.includes('audit.read_identity') && (
+                <IdentityAuditPanel key={`audit-${identity.accountId}`} />
+              )}
+            </>
+          )}
         </AuthenticationPanel>
       )}
       <section aria-labelledby="health-title" aria-busy={isLoading}>

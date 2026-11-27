@@ -72,7 +72,7 @@ export async function createIdentityFixture() {
     roleCreated = true;
     await owner.query(`GRANT USAGE ON SCHEMA core,iam,audit TO "${role}"; GRANT SELECT ON ALL TABLES IN SCHEMA core,iam,audit TO "${role}";
       GRANT INSERT,UPDATE ON core.person,iam.account,iam.account_role,iam.auth_session,iam.account_action_token TO "${role}";
-      GRANT EXECUTE ON FUNCTION audit.set_request_context(uuid,uuid,uuid),audit.record_auth_event(uuid,text,bytea,uuid,uuid) TO "${role}"`);
+      GRANT EXECUTE ON FUNCTION audit.set_request_context(uuid,uuid,uuid),audit.record_auth_event(uuid,text,bytea,uuid,uuid),audit.record_identity_event(text,uuid,text) TO "${role}"`);
     url.username = role;
     url.password = rolePassword;
     runtime = new Pool({ connectionString: url.toString(), max: 5 });

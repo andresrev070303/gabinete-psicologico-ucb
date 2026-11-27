@@ -70,5 +70,9 @@ export function useAuthentication() {
         }));
     }
   }
-  return { state, authenticate, endSession };
+  function clearSession() {
+    activeRequest.current?.abort();
+    setState({ current: null, busy: false, error: null });
+  }
+  return { state, authenticate, endSession, clearSession };
 }
