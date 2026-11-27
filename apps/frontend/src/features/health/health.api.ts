@@ -32,13 +32,13 @@ export async function checkDatabaseHealth(
   });
 
   if (!response.ok) {
-    throw new Error(`The API returned HTTP ${response.status}.`);
+    throw new Error(`El servicio respondió con HTTP ${response.status}.`);
   }
 
   const data: unknown = await response.json();
 
   if (!isDatabaseHealth(data)) {
-    throw new Error('The API returned an unexpected response.');
+    throw new Error('El servicio devolvió una respuesta inesperada.');
   }
 
   return data;

@@ -67,26 +67,26 @@ describe('Operational access screens', () => {
       Response.json({ items: [account], total: 1, page: 1, pageSize: 20 }),
     );
     render(<AccountsPanel identity={director} />);
-    await screen.findByText('No accounts are visible to your role.');
-    fireEvent.change(screen.getByLabelText('Given names'), {
+    await screen.findByText('No hay cuentas disponibles para tu perfil.');
+    fireEvent.change(screen.getByLabelText('Nombres'), {
       target: { value: 'Test' },
     });
-    fireEvent.change(screen.getByLabelText('Family names'), {
+    fireEvent.change(screen.getByLabelText('Apellidos'), {
       target: { value: 'User' },
     });
-    fireEvent.change(screen.getByLabelText('Email address'), {
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), {
       target: { value: account.email },
     });
     fireEvent.submit(
-      screen.getByRole('form', { name: 'Invite operational account' }),
+      screen.getByRole('form', { name: 'Invitar cuenta del equipo' }),
     );
-    await screen.findByText(/email delivery could not be confirmed/u);
-    expect(screen.queryByLabelText('Activation link')).toBeNull();
+    await screen.findByText(/no pudimos confirmar el envío del correo/u);
+    expect(screen.queryByLabelText('Enlace de activación')).toBeNull();
     expect(
       JSON.parse(fetcher.mock.calls[1]![1]!.body as string).roleCodes,
     ).toEqual(['psychologist']);
     expect(
-      screen.queryByRole('button', { name: 'Assign director' }),
+      screen.queryByRole('button', { name: 'Designar Director' }),
     ).toBeNull();
   });
   it('edits names and phone while retaining the immutable sign-in address', async () => {
@@ -102,8 +102,10 @@ describe('Operational access screens', () => {
         onClose={close}
       />,
     );
-    const form = screen.getByRole('form', { name: 'Edit account profile' });
-    fireEvent.change(within(form).getByLabelText('Given names'), {
+    const form = screen.getByRole('form', {
+      name: 'Editar datos de la cuenta',
+    });
+    fireEvent.change(within(form).getByLabelText('Nombres'), {
       target: { value: 'Corrected' },
     });
     fireEvent.submit(form);
@@ -127,8 +129,8 @@ describe('Operational access screens', () => {
       />,
     );
     expect(fetcher).not.toHaveBeenCalled();
-    const form = screen.getByRole('form', { name: 'Disable account' });
-    fireEvent.change(within(form).getByLabelText('Disable reason'), {
+    const form = screen.getByRole('form', { name: 'Desactivar cuenta' });
+    fireEvent.change(within(form).getByLabelText('Motivo de desactivación'), {
       target: { value: 'Practice completed' },
     });
     fireEvent.click(within(form).getByRole('checkbox'));
@@ -154,11 +156,13 @@ describe('Operational access screens', () => {
       ]),
     );
     fetcher.mockResolvedValueOnce(Response.json({ contactPhone: null }));
-    fireEvent.click(screen.getByRole('button', { name: 'Manage my access' }));
-    await screen.findByRole('button', { name: 'Revoke current session' });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Gestionar mi acceso' }),
+    );
+    await screen.findByRole('button', { name: 'Revocar sesión actual' });
     fetcher.mockResolvedValueOnce(new Response(null, { status: 204 }));
     fireEvent.click(
-      screen.getByRole('button', { name: 'Revoke current session' }),
+      screen.getByRole('button', { name: 'Revocar sesión actual' }),
     );
     await waitFor(() => expect(ended).toHaveBeenCalledOnce());
     expect(String(fetcher.mock.calls[2]![0])).toContain(
@@ -170,30 +174,36 @@ describe('Operational access screens', () => {
     render(<OwnAccessPanel onSessionEnded={ended} />);
     fetcher.mockResolvedValueOnce(Response.json([]));
     fetcher.mockResolvedValueOnce(Response.json({ contactPhone: null }));
-    fireEvent.click(screen.getByRole('button', { name: 'Manage my access' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Gestionar mi acceso' }),
+    );
     await waitFor(() =>
       expect(
-        (screen.getByLabelText('Current password') as HTMLInputElement)
+        (screen.getByLabelText('Contraseña actual') as HTMLInputElement)
           .disabled,
       ).toBe(false),
     );
-    fireEvent.change(screen.getByLabelText('Current password'), {
+    fireEvent.change(screen.getByLabelText('Contraseña actual'), {
       target: { value: 'old password' },
     });
-    fireEvent.change(screen.getByLabelText('New password'), {
+    fireEvent.change(screen.getByLabelText('Nueva contraseña'), {
       target: { value: 'a new private passphrase' },
     });
-    fireEvent.change(screen.getByLabelText('Repeat new password'), {
+    fireEvent.change(screen.getByLabelText('Repetir contraseña nueva'), {
       target: { value: 'different' },
     });
-    fireEvent.submit(screen.getByRole('form', { name: 'Change my password' }));
-    expect(screen.getByRole('alert').textContent).toContain('must match');
+    fireEvent.submit(
+      screen.getByRole('form', { name: 'Cambiar mi contraseña' }),
+    );
+    expect(screen.getByRole('alert').textContent).toContain('deben coincidir');
     expect(fetcher).toHaveBeenCalledTimes(2);
     fetcher.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    fireEvent.change(screen.getByLabelText('Repeat new password'), {
+    fireEvent.change(screen.getByLabelText('Repetir contraseña nueva'), {
       target: { value: 'a new private passphrase' },
     });
-    fireEvent.submit(screen.getByRole('form', { name: 'Change my password' }));
+    fireEvent.submit(
+      screen.getByRole('form', { name: 'Cambiar mi contraseña' }),
+    );
     await waitFor(() => expect(ended).toHaveBeenCalledOnce());
   });
   it('lets the director revoke the last role explicitly without deleting the account', async () => {
@@ -207,10 +217,10 @@ describe('Operational access screens', () => {
         onClose={vi.fn()}
       />,
     );
-    const form = screen.getByRole('form', { name: 'Change operational roles' });
-    fireEvent.click(
-      within(form).getByRole('checkbox', { name: 'Psychologist' }),
-    );
+    const form = screen.getByRole('form', {
+      name: 'Cambiar perfiles operativos',
+    });
+    fireEvent.click(within(form).getByRole('checkbox', { name: 'Psicólogo' }));
     fireEvent.submit(form);
     await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
     expect(JSON.parse(fetcher.mock.calls[0]![1]!.body as string)).toEqual({
@@ -235,12 +245,10 @@ describe('Operational access screens', () => {
         onClose={vi.fn()}
       />,
     );
-    const form = screen.getByRole('form', { name: 'Reinvite account' });
+    const form = screen.getByRole('form', { name: 'Volver a invitar' });
+    fireEvent.click(within(form).getByRole('checkbox', { name: 'Psicólogo' }));
     fireEvent.click(
-      within(form).getByRole('checkbox', { name: 'Psychologist' }),
-    );
-    fireEvent.click(
-      within(form).getByRole('checkbox', { name: 'Student assistant' }),
+      within(form).getByRole('checkbox', { name: 'Auxiliar / pasante' }),
     );
     fireEvent.submit(form);
     await waitFor(() => expect(link).toHaveBeenCalledOnce());
@@ -265,7 +273,9 @@ describe('Operational access screens', () => {
         onClose={vi.fn()}
       />,
     );
-    const form = screen.getByRole('form', { name: 'Issue password recovery' });
+    const form = screen.getByRole('form', {
+      name: 'Emitir recuperación de contraseña',
+    });
     fireEvent.click(within(form).getByRole('checkbox'));
     fireEvent.submit(form);
     await waitFor(() => expect(link).toHaveBeenCalledOnce());
@@ -289,33 +299,33 @@ describe('Operational access screens', () => {
       />,
     );
     fireEvent.submit(
-      screen.getByRole('form', { name: 'Change operational roles' }),
+      screen.getByRole('form', { name: 'Cambiar perfiles operativos' }),
     );
     await screen.findByRole('alert');
     expect(screen.getByRole('alert').textContent).toContain(
-      'Sign out and sign in again',
+      'cierra sesión e ingresa nuevamente',
     );
     expect(close).not.toHaveBeenCalled();
   });
   it('reloads a failed audit query and paginates within the same server scope', async () => {
     fetcher.mockResolvedValueOnce(new Response(null, { status: 503 }));
     render(<IdentityAuditPanel />);
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Show identity audit' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar auditoría' }));
     await screen.findByRole('alert');
     fetcher.mockResolvedValueOnce(
       Response.json({ items: [], total: 21, page: 1, pageSize: 20 }),
     );
     fireEvent.click(
-      screen.getByRole('button', { name: 'Refresh identity audit' }),
+      screen.getByRole('button', { name: 'Actualizar auditoría' }),
     );
-    await screen.findByText('Page 1');
+    await screen.findByText('Página 1');
     fetcher.mockResolvedValueOnce(
       Response.json({ items: [], total: 21, page: 2, pageSize: 20 }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Next audit page' }));
-    await screen.findByText('Page 2');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Página siguiente de auditoría' }),
+    );
+    await screen.findByText('Página 2');
     expect(String(fetcher.mock.calls[2]![0])).toContain(
       'identity-audit?page=2',
     );
@@ -343,10 +353,8 @@ describe('Operational access screens', () => {
         pageSize: 20,
       }),
     );
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Show identity audit' }),
-    );
-    await screen.findByText('account_disabled');
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar auditoría' }));
+    await screen.findByText('Desactivación de cuenta');
     expect(screen.getByText('Practice completed')).toBeTruthy();
   });
 });

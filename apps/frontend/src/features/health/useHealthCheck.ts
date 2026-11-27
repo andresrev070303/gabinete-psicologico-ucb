@@ -4,18 +4,20 @@ import type { HealthCheckState } from './health.types';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === 'TimeoutError') {
-    return 'The request timed out. Please try again.';
+    return 'La solicitud tardó demasiado. Intenta nuevamente.';
   }
 
   if (error instanceof TypeError) {
-    return 'The API could not be reached. Check its URL and availability.';
+    return 'No pudimos conectar con el servicio. Comprueba tu conexión e intenta nuevamente.';
   }
 
   if (error instanceof SyntaxError) {
-    return 'The API did not return valid JSON.';
+    return 'El servicio devolvió una respuesta inesperada.';
   }
 
-  return error instanceof Error ? error.message : 'The connection check failed.';
+  return error instanceof Error
+    ? error.message
+    : 'No pudimos verificar la conexión.';
 }
 
 export function useHealthCheck() {

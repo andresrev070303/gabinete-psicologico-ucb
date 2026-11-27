@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { activateAccount } from './accounts.api';
+import { getUserError } from '../../lib/presentation';
 
 export function ActivationPanel({
   token,
@@ -20,7 +21,7 @@ export function ActivationPanel({
     event.preventDefault();
     setError(null);
     if (password !== confirmation) {
-      setError('The passwords must match.');
+      setError('Las contraseñas deben coincidir.');
       return;
     }
     const controller = new AbortController();
@@ -30,12 +31,7 @@ export function ActivationPanel({
       await activateAccount(token, password, controller.signal);
       if (!controller.signal.aborted) setComplete(true);
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : 'Activation failed. Try again.',
-        );
+      if (!controller.signal.aborted) setError(getUserError(failure));
     } finally {
       if (!controller.signal.aborted) {
         setBusy(false);
@@ -50,27 +46,27 @@ export function ActivationPanel({
       aria-labelledby="activation-title"
       aria-busy={busy}
     >
-      <h2 id="activation-title">Activate your account</h2>
+      <h1 id="activation-title">Establece tu contraseña</h1>
       {error && <p role="alert">{error}</p>}
       {complete ? (
         <>
           <p role="status">
-            Your account is active and your password is set. Sign in to see your
-            assigned access. Director candidates require a separate designation.
+            Tu contraseña quedó establecida. Ingresa para consultar tus accesos.
+            Los candidatos a Director requieren una designación posterior.
           </p>
           <button type="button" onClick={onComplete}>
-            Go to sign in
+            Ir al inicio de sesión
           </button>
         </>
       ) : (
         <form
-          aria-label="Account activation"
+          aria-label="Activación de cuenta"
           onSubmit={(event) => {
             void submit(event);
           }}
         >
-          <p>Choose a passphrase of 15 to 128 characters.</p>
-          <label htmlFor="activation-password">New password</label>
+          <p>Elige una contraseña o frase de 15 a 128 caracteres.</p>
+          <label htmlFor="activation-password">Nueva contraseña</label>
           <input
             id="activation-password"
             type="password"
@@ -82,7 +78,7 @@ export function ActivationPanel({
             disabled={busy}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <label htmlFor="activation-confirmation">Repeat password</label>
+          <label htmlFor="activation-confirmation">Repetir contraseña</label>
           <input
             id="activation-confirmation"
             type="password"
@@ -93,7 +89,7 @@ export function ActivationPanel({
             onChange={(event) => setConfirmation(event.target.value)}
           />
           <button type="submit" disabled={busy}>
-            {busy ? 'Activating...' : 'Activate account'}
+            {busy ? 'Guardando…' : 'Guardar contraseña'}
           </button>
         </form>
       )}

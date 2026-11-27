@@ -42,12 +42,13 @@ async function send(
 }
 function checkStatus(response: Response): void {
   if (response.ok) return;
-  if (response.status === 401) throw new Error('Invalid email or password.');
+  if (response.status === 401)
+    throw new Error('El correo electrónico o la contraseña son incorrectos.');
   if (response.status === 429)
-    throw new Error('Too many attempts. Try again in 15 minutes.');
+    throw new Error('Demasiados intentos. Intenta nuevamente en 15 minutos.');
   if (response.status === 503)
-    throw new Error('Authentication is temporarily unavailable.');
-  throw new Error(`Authentication failed (HTTP ${response.status}).`);
+    throw new Error('El acceso no está disponible temporalmente.');
+  throw new Error(`No pudimos iniciar sesión (HTTP ${response.status}).`);
 }
 async function readIdentity(
   response: Response,
@@ -55,7 +56,9 @@ async function readIdentity(
   checkStatus(response);
   const value: unknown = await response.json();
   if (!isIdentity(value))
-    throw new Error('The API returned an unexpected identity response.');
+    throw new Error(
+      'El servicio devolvió una respuesta de identidad inesperada.',
+    );
   return value;
 }
 

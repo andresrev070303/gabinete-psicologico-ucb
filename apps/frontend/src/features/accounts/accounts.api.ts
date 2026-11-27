@@ -23,23 +23,24 @@ function account(value: unknown): value is AccountSummary {
 export async function check(response: Response): Promise<void> {
   if (response.ok) return;
   if (response.status === 401)
-    throw new Error('Your session has expired. Sign out and sign in again.');
+    throw new Error('Tu sesión venció. Cierra sesión e ingresa nuevamente.');
   if (response.status === 503)
     throw new Error(
-      'Account management is temporarily unavailable. Try again.',
+      'La gestión de cuentas no está disponible temporalmente. Intenta nuevamente.',
     );
   const body: unknown = await response.json().catch(() => null);
   const messages: Record<string, string> = {
     reauthentication_required:
-      'Sign out and sign in again before changing account access.',
-    email_conflict: 'An account already uses this email address.',
-    invalid_candidate: 'Select an activated director candidate.',
+      'Para cambiar accesos, cierra sesión e ingresa nuevamente.',
+    email_conflict: 'Ya existe una cuenta con este correo electrónico.',
+    invalid_candidate:
+      'Selecciona un candidato a Director con la cuenta activada.',
     invalid_activation:
-      'The activation link is invalid, expired or already used.',
+      'El enlace de activación es inválido, venció o ya fue utilizado.',
     invalid_state:
-      'This operation is not available for the current account state.',
-    invalid_password: 'The current password is incorrect.',
-    rate_limited: 'Too many attempts. Try again in 15 minutes.',
+      'Esta operación no está disponible para el estado actual de la cuenta.',
+    invalid_password: 'La contraseña actual es incorrecta.',
+    rate_limited: 'Demasiados intentos. Intenta nuevamente en 15 minutos.',
   };
   if (
     record(body) &&
@@ -47,7 +48,7 @@ export async function check(response: Response): Promise<void> {
     Object.hasOwn(messages, body.code)
   )
     throw new Error(messages[body.code]);
-  throw new Error(`The operation was rejected (HTTP ${response.status}).`);
+  throw new Error(`La operación fue rechazada (HTTP ${response.status}).`);
 }
 export async function listAccounts(
   page: number,
@@ -68,7 +69,7 @@ export async function listAccounts(
     !Number.isInteger(body.page) ||
     !Number.isInteger(body.pageSize)
   )
-    throw new Error('The API returned an unexpected account list.');
+    throw new Error('El servicio devolvió una lista de cuentas inesperada.');
   return body as AccountPage;
 }
 export async function inviteDirector(
@@ -106,7 +107,7 @@ export async function createAccessLink(
     (body.delivery !== undefined &&
       !['manual', 'sent', 'failed'].includes(String(body.delivery)))
   )
-    throw new Error('The API returned an unexpected invitation.');
+    throw new Error('El servicio devolvió una invitación inesperada.');
   return body as DirectorInvitation;
 }
 export async function assignDirector(

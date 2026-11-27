@@ -8,6 +8,7 @@ import {
   updateContact,
 } from './account-lifecycle.api';
 import type { OwnSession } from './accounts.types';
+import { formatDateTime, getUserError } from '../../lib/presentation';
 
 export function OwnAccessPanel({
   onSessionEnded,
@@ -17,9 +18,9 @@ export function OwnAccessPanel({
   const [opened, setOpened] = useState(false);
   return (
     <section className="own-access-panel">
-      <h3>My access</h3>
+      <h3>Mi acceso</h3>
       <button type="button" onClick={() => setOpened(!opened)}>
-        {opened ? 'Hide my access' : 'Manage my access'}
+        {opened ? 'Ocultar mi acceso' : 'Gestionar mi acceso'}
       </button>
       {opened && <OwnAccessDetails onSessionEnded={onSessionEnded} />}
     </section>
@@ -48,11 +49,7 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
       },
       (failure: unknown) => {
         if (!controller.signal.aborted) {
-          setError(
-            failure instanceof Error
-              ? failure.message
-              : 'Could not load your access.',
-          );
+          setError(getUserError(failure));
           setBusy(false);
         }
       },
@@ -72,10 +69,7 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
       await work(controller.signal);
       if (!controller.signal.aborted) setMessage(success);
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(
-          failure instanceof Error ? failure.message : 'The operation failed.',
-        );
+      if (!controller.signal.aborted) setError(getUserError(failure));
     } finally {
       if (!controller.signal.aborted) setBusy(false);
     }
@@ -85,7 +79,7 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
     const form = event.currentTarget;
     const data = new FormData(form);
     if (data.get('newPassword') !== data.get('confirmation')) {
-      setError('The passwords must match.');
+      setError('Las contraseñas deben coincidir.');
       return;
     }
     await run(async (signal) => {
@@ -95,25 +89,25 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
         signal,
       );
       if (!signal.aborted) onSessionEnded();
-    }, 'Password changed. Sign in again.');
+    }, 'Contraseña actualizada. Ingresa nuevamente.');
     form.reset();
   }
   return (
-    <div aria-label="Own account access" aria-busy={busy}>
+    <div aria-label="Acceso de mi cuenta" aria-busy={busy}>
       {error && <p role="alert">{error}</p>}
       {message && <p role="status">{message}</p>}
       <form
-        aria-label="My contact phone"
+        aria-label="Mi teléfono de contacto"
         onSubmit={(event) => {
           event.preventDefault();
           void run(
             (signal) => updateContact(phone.trim() || null, signal),
-            'Contact phone updated.',
+            'Teléfono de contacto actualizado.',
           );
         }}
       >
         <label>
-          My contact phone
+          Mi teléfono de contacto
           <input
             type="tel"
             value={phone}
@@ -122,16 +116,16 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
             disabled={busy}
           />
         </label>
-        <button disabled={busy}>Save my contact</button>
+        <button disabled={busy}>Guardar contacto</button>
       </form>
       <form
-        aria-label="Change my password"
+        aria-label="Cambiar mi contraseña"
         onSubmit={(event) => {
           void password(event);
         }}
       >
         <label>
-          Current password
+          Contraseña actual
           <input
             name="currentPassword"
             type="password"
@@ -141,7 +135,7 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
           />
         </label>
         <label>
-          New password
+          Nueva contraseña
           <input
             name="newPassword"
             type="password"
@@ -153,7 +147,7 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
           />
         </label>
         <label>
-          Repeat new password
+          Repetir contraseña nueva
           <input
             name="confirmation"
             type="password"
@@ -162,15 +156,15 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
             disabled={busy}
           />
         </label>
-        <p>Changing your password signs out all your sessions.</p>
-        <button disabled={busy}>Change my password</button>
+        <p>Cambiar tu contraseña cierra todas tus sesiones.</p>
+        <button disabled={busy}>Cambiar mi contraseña</button>
       </form>
-      <h4>My active sessions</h4>
+      <h4>Mis sesiones activas</h4>
       <ul>
         {sessions.map((session) => (
           <li key={session.id}>
-            {session.current ? 'Current session' : 'Other session'} — Started{' '}
-            {new Date(session.createdAt).toLocaleString()}
+            {session.current ? 'Sesión actual' : 'Otra sesión'} — Iniciada{' '}
+            {formatDateTime(session.createdAt)}
             <button
               type="button"
               disabled={busy}
@@ -180,10 +174,10 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
                   if (signal.aborted) return;
                   if (session.current) onSessionEnded();
                   else setSessions(await listOwnSessions(signal));
-                }, 'Session revoked.');
+                }, 'Sesión revocada.');
               }}
             >
-              Revoke {session.current ? 'current' : 'other'} session
+              Revocar sesión {session.current ? 'actual' : 'adicional'}
             </button>
           </li>
         ))}
@@ -195,10 +189,10 @@ function OwnAccessDetails({ onSessionEnded }: { onSessionEnded: () => void }) {
           void run(async (signal) => {
             const items = await listOwnSessions(signal);
             if (!signal.aborted) setSessions(items);
-          }, 'Sessions refreshed.');
+          }, 'Sesiones actualizadas.');
         }}
       >
-        Refresh my sessions
+        Actualizar mis sesiones
       </button>
     </div>
   );

@@ -114,7 +114,7 @@ export async function listOwnSessions(
         typeof item.current === 'boolean',
     )
   )
-    throw new Error('The API returned an unexpected session list.');
+    throw new Error('El servicio devolvió una lista de sesiones inesperada.');
   return body as OwnSession[];
 }
 export function revokeOwnSession(id: string, signal: AbortSignal) {
@@ -133,7 +133,7 @@ export async function getContact(signal: AbortSignal): Promise<string | null> {
     !record(body) ||
     (body.contactPhone !== null && typeof body.contactPhone !== 'string')
   )
-    throw new Error('The API returned unexpected contact data.');
+    throw new Error('El servicio devolvió datos de contacto inesperados.');
   return body.contactPhone;
 }
 export function updateContact(
@@ -176,6 +176,6 @@ export async function listIdentityAudit(
         item.changedFields.every((field: unknown) => typeof field === 'string'),
     )
   )
-    throw new Error('The API returned an unexpected audit list.');
+    throw new Error('El servicio devolvió una lista de auditoría inesperada.');
   return body as IdentityAuditPage;
 }

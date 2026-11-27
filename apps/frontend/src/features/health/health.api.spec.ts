@@ -50,7 +50,7 @@ describe('checkDatabaseHealth', () => {
 
       await expect(
         checkDatabaseHealth(new AbortController().signal),
-      ).rejects.toThrow('VITE_API_URL is required.');
+      ).rejects.toThrow('Falta configurar VITE_API_URL.');
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
@@ -72,7 +72,7 @@ describe('checkDatabaseHealth', () => {
 
       await expect(
         checkDatabaseHealth(new AbortController().signal),
-      ).rejects.toThrow('VITE_API_URL must be a valid URL.');
+      ).rejects.toThrow('VITE_API_URL debe contener una dirección válida.');
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
@@ -82,7 +82,7 @@ describe('checkDatabaseHealth', () => {
 
     await expect(
       checkDatabaseHealth(new AbortController().signal),
-    ).rejects.toThrow('VITE_API_URL must use HTTP or HTTPS.');
+    ).rejects.toThrow('VITE_API_URL debe utilizar HTTP o HTTPS.');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -91,7 +91,7 @@ describe('checkDatabaseHealth', () => {
 
     await expect(
       checkDatabaseHealth(new AbortController().signal),
-    ).rejects.toThrow('The API returned HTTP 503.');
+    ).rejects.toThrow('El servicio respondió con HTTP 503.');
   });
 
   it.each([
@@ -108,7 +108,7 @@ describe('checkDatabaseHealth', () => {
 
     await expect(
       checkDatabaseHealth(new AbortController().signal),
-    ).rejects.toThrow('The API returned an unexpected response.');
+    ).rejects.toThrow('El servicio devolvió una respuesta inesperada.');
   });
 
   it('propagates an invalid JSON response', async () => {

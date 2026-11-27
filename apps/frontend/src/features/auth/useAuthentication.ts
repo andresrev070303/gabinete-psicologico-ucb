@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentSession, signIn, signOut } from './auth.api';
 import type { AuthenticatedIdentity, SignInInput } from './auth.types';
+import { getUserError } from '../../lib/presentation';
 
 type AuthenticationState = {
   current: AuthenticatedIdentity | null;
   busy: boolean;
   error: string | null;
 };
-function errorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : 'Authentication failed. Please try again.';
-}
 
 export function useAuthentication() {
   const [state, setState] = useState<AuthenticationState>({
@@ -31,7 +27,7 @@ export function useAuthentication() {
       },
       (error: unknown) => {
         if (!controller.signal.aborted)
-          setState({ current: null, busy: false, error: errorMessage(error) });
+          setState({ current: null, busy: false, error: getUserError(error) });
       },
     );
     return () => {
@@ -50,7 +46,7 @@ export function useAuthentication() {
         setState({ current, busy: false, error: null });
     } catch (error) {
       if (!controller.signal.aborted)
-        setState({ current: null, busy: false, error: errorMessage(error) });
+        setState({ current: null, busy: false, error: getUserError(error) });
     }
   }
   async function endSession(): Promise<void> {
@@ -66,7 +62,7 @@ export function useAuthentication() {
         setState((previous) => ({
           ...previous,
           busy: false,
-          error: errorMessage(error),
+          error: getUserError(error),
         }));
     }
   }

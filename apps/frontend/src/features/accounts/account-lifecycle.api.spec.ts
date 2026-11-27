@@ -161,7 +161,7 @@ describe('Account lifecycle API', () => {
           : kind === 'contact'
             ? getContact(signal)
             : listIdentityAudit(1, signal),
-      ).rejects.toThrow('unexpected');
+      ).rejects.toThrow(/inesperad[oa]s?/u);
     },
   );
   it('reports a throttled password change without exposing the server detail', async () => {
@@ -172,7 +172,7 @@ describe('Account lifecycle API', () => {
       ),
     );
     await expect(changePassword('old', 'new', signal)).rejects.toThrow(
-      '15 minutes',
+      '15 minutos',
     );
   });
 });

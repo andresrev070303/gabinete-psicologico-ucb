@@ -11,6 +11,7 @@ import {
 } from './account-lifecycle.api';
 import { OperationalRoleFields } from './OperationalRoleFields';
 import { selectedRoles } from './operational-roles';
+import { getUserError } from '../../lib/presentation';
 
 export function AccountEditor({
   account,
@@ -52,22 +53,19 @@ export function AccountEditor({
         onClose();
       }
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(
-          failure instanceof Error ? failure.message : 'The operation failed.',
-        );
+      if (!controller.signal.aborted) setError(getUserError(failure));
     } finally {
       if (!controller.signal.aborted) setBusy(false);
     }
   }
   const operational = account.managementKind === 'operational';
   return (
-    <section aria-label={`Manage ${account.email}`} aria-busy={busy}>
-      <h3>Manage {account.email}</h3>
+    <section aria-label={`Gestionar ${account.email}`} aria-busy={busy}>
+      <h3>Gestionar {account.email}</h3>
       {error && <p role="alert">{error}</p>}
       {operational && permitted('accounts.update_operational') && (
         <form
-          aria-label="Edit account profile"
+          aria-label="Editar datos de la cuenta"
           onSubmit={(event) => {
             void submit(event, (data, signal) =>
               updateAccount(
@@ -84,7 +82,7 @@ export function AccountEditor({
           }}
         >
           <label>
-            Given names
+            Nombres
             <input
               name="givenNames"
               defaultValue={account.givenNames}
@@ -94,7 +92,7 @@ export function AccountEditor({
             />
           </label>
           <label>
-            Family names
+            Apellidos
             <input
               name="familyNames"
               defaultValue={account.familyNames}
@@ -104,7 +102,7 @@ export function AccountEditor({
             />
           </label>
           <label>
-            Contact phone
+            Teléfono de contacto
             <input
               name="contactPhone"
               type="tel"
@@ -113,7 +111,7 @@ export function AccountEditor({
               disabled={busy}
             />
           </label>
-          <button disabled={busy}>Save profile</button>
+          <button disabled={busy}>Guardar datos</button>
         </form>
       )}
       {operational &&
@@ -121,7 +119,7 @@ export function AccountEditor({
         permitted('roles.assign_operational') &&
         permitted('roles.revoke_operational') && (
           <form
-            aria-label="Change operational roles"
+            aria-label="Cambiar perfiles operativos"
             onSubmit={(event) => {
               void submit(event, (data, signal) =>
                 changeRoles(account.accountId, selectedRoles(data), signal),
@@ -130,10 +128,10 @@ export function AccountEditor({
           >
             <OperationalRoleFields roles={account.roles} disabled={busy} />
             <p>
-              Changing roles signs this account out. An empty selection revokes
-              all operational roles.
+              Cambiar los perfiles cierra las sesiones de esta cuenta. Una
+              selección vacía revoca todos sus perfiles operativos.
             </p>
-            <button disabled={busy}>Save roles</button>
+            <button disabled={busy}>Guardar perfiles</button>
           </form>
         )}
       {account.status !== 'disabled' &&
@@ -141,7 +139,7 @@ export function AccountEditor({
           operational ? 'accounts.disable_operational' : 'director.disable',
         ) && (
           <form
-            aria-label="Disable account"
+            aria-label="Desactivar cuenta"
             onSubmit={(event) => {
               void submit(event, (data, signal) =>
                 disableAccount(
@@ -153,7 +151,7 @@ export function AccountEditor({
             }}
           >
             <label>
-              Disable reason
+              Motivo de desactivación
               <input
                 name="reason"
                 minLength={5}
@@ -163,10 +161,11 @@ export function AccountEditor({
               />
             </label>
             <label>
-              <input type="checkbox" required disabled={busy} />I confirm
-              disabling this account and revoking its access.
+              <input type="checkbox" required disabled={busy} />
+              Confirmo la desactivación de esta cuenta y la revocación de sus
+              accesos.
             </label>
-            <button disabled={busy}>Disable account</button>
+            <button disabled={busy}>Desactivar cuenta</button>
           </form>
         )}
       {account.status !== 'active' &&
@@ -174,7 +173,7 @@ export function AccountEditor({
           operational ? 'accounts.reinvite_operational' : 'director.reinvite',
         ) && (
           <form
-            aria-label="Reinvite account"
+            aria-label="Volver a invitar"
             onSubmit={(event) => {
               void submit(event, (data, signal) =>
                 reinviteAccount(
@@ -192,10 +191,10 @@ export function AccountEditor({
               />
             )}
             <p>
-              A new activation link replaces previous links. Revoked access is
-              never restored automatically.
+              El nuevo enlace reemplaza las invitaciones anteriores. Los accesos
+              revocados no se restablecen automáticamente.
             </p>
-            <button disabled={busy}>Create new invitation</button>
+            <button disabled={busy}>Crear nueva invitación</button>
           </form>
         )}
       {account.status === 'active' &&
@@ -205,7 +204,7 @@ export function AccountEditor({
             : 'credentials.issue_director_reset',
         ) && (
           <form
-            aria-label="Issue password recovery"
+            aria-label="Emitir recuperación de contraseña"
             onSubmit={(event) => {
               void submit(event, (_data, signal) =>
                 issuePasswordReset(account.accountId, signal),
@@ -213,15 +212,15 @@ export function AccountEditor({
             }}
           >
             <label>
-              <input type="checkbox" required disabled={busy} />I confirm
-              issuing a private recovery link. Current sessions end when the
-              password is reset.
+              <input type="checkbox" required disabled={busy} />
+              Confirmo la emisión de un enlace privado de recuperación. Las
+              sesiones se cerrarán al restablecer la contraseña.
             </label>
-            <button disabled={busy}>Issue recovery link</button>
+            <button disabled={busy}>Emitir enlace de recuperación</button>
           </form>
         )}
       <button type="button" onClick={onClose} disabled={busy}>
-        Close account editor
+        Cerrar edición de cuenta
       </button>
     </section>
   );

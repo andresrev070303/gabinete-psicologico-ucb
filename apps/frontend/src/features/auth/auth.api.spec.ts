@@ -85,9 +85,9 @@ describe('Authentication API', () => {
   );
 
   it.each([
-    [401, 'Invalid email or password.'],
-    [429, 'Too many attempts. Try again in 15 minutes.'],
-    [503, 'Authentication is temporarily unavailable.'],
+    [401, 'El correo electrónico o la contraseña son incorrectos.'],
+    [429, 'Demasiados intentos. Intenta nuevamente en 15 minutos.'],
+    [503, 'El acceso no está disponible temporalmente.'],
   ])(
     'reports HTTP %s without exposing server internals',
     async (status, message) => {
@@ -118,7 +118,9 @@ describe('Authentication API', () => {
     fetchMock.mockResolvedValueOnce(Response.json(body));
     await expect(
       getCurrentSession(new AbortController().signal),
-    ).rejects.toThrow('The API returned an unexpected identity response.');
+    ).rejects.toThrow(
+      'El servicio devolvió una respuesta de identidad inesperada.',
+    );
   });
 
   it('rejects a cross-origin authentication URL before sending credentials', async () => {
@@ -129,7 +131,7 @@ describe('Authentication API', () => {
         new AbortController().signal,
       ),
     ).rejects.toThrow(
-      'Authentication requires a same-origin API. Set VITE_API_URL=/api.',
+      'Configura VITE_API_URL=/api para ingresar desde el mismo sitio.',
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });

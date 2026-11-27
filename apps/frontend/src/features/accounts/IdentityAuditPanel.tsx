@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { listIdentityAudit } from './account-lifecycle.api';
 import type { IdentityAuditPage } from './accounts.types';
+import {
+  formatDateTime,
+  getAuditActionLabel,
+  getAuditFieldLabel,
+  getUserError,
+} from '../../lib/presentation';
 export function IdentityAuditPanel() {
   const [opened, setOpened] = useState(false);
   return (
     <section className="identity-audit-panel">
-      <h3>Identity audit</h3>
+      <h3>Auditoría de accesos</h3>
       <button type="button" onClick={() => setOpened(!opened)}>
-        {opened ? 'Hide identity audit' : 'Show identity audit'}
+        {opened ? 'Ocultar auditoría' : 'Mostrar auditoría'}
       </button>
       {opened && <AuditDetails />}
     </section>
@@ -30,11 +36,7 @@ function AuditDetails() {
       },
       (failure: unknown) => {
         if (!controller.signal.aborted) {
-          setError(
-            failure instanceof Error
-              ? failure.message
-              : 'Could not load the audit.',
-          );
+          setError(getUserError(failure));
           setBusy(false);
         }
       },
@@ -51,12 +53,7 @@ function AuditDetails() {
       const result = await listIdentityAudit(number, controller.signal);
       if (!controller.signal.aborted) setPage(result);
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : 'Could not load the audit.',
-        );
+      if (!controller.signal.aborted) setError(getUserError(failure));
     } finally {
       if (!controller.signal.aborted) setBusy(false);
     }
@@ -71,35 +68,35 @@ function AuditDetails() {
           void load(page?.page ?? 1);
         }}
       >
-        Refresh identity audit
+        Actualizar auditoría
       </button>
       <div className="accounts-table">
         <table>
-          <caption>Identity events within your authorized scope</caption>
+          <caption>Operaciones dentro de tu ámbito autorizado</caption>
           <thead>
             <tr>
-              <th>When</th>
-              <th>Action</th>
-              <th>Account</th>
-              <th>Actor / session / request</th>
-              <th>Changed fields / reason</th>
+              <th>Fecha</th>
+              <th>Acción</th>
+              <th>Cuenta</th>
+              <th>Responsable / sesión / solicitud</th>
+              <th>Campos modificados / motivo</th>
             </tr>
           </thead>
           <tbody>
             {page?.items.map((entry) => (
               <tr key={entry.id}>
-                <td>{new Date(entry.occurredAt).toLocaleString()}</td>
-                <td>{entry.action}</td>
-                <td>{entry.targetAccountId ?? 'System'}</td>
+                <td>{formatDateTime(entry.occurredAt)}</td>
+                <td>{getAuditActionLabel(entry.action)}</td>
+                <td>{entry.targetAccountId ?? 'Sistema'}</td>
                 <td>
-                  {entry.actorAccountId ?? 'System'}
+                  {entry.actorAccountId ?? 'Sistema'}
                   <br />
-                  {entry.sessionId ?? 'No session'}
+                  {entry.sessionId ?? 'Sin sesión'}
                   <br />
                   {entry.requestId}
                 </td>
                 <td>
-                  {entry.changedFields.join(', ')}
+                  {entry.changedFields.map(getAuditFieldLabel).join(', ')}
                   {entry.reason && <p>{entry.reason}</p>}
                 </td>
               </tr>
@@ -107,24 +104,27 @@ function AuditDetails() {
           </tbody>
         </table>
       </div>
+      {page?.total === 0 && (
+        <p>No hay operaciones registradas en tu ámbito autorizado.</p>
+      )}
       {page && (
-        <nav aria-label="Audit pages">
+        <nav aria-label="Páginas de auditoría">
           <button
             disabled={busy || page.page === 1}
             onClick={() => {
               void load(page.page - 1);
             }}
           >
-            Previous audit page
+            Página anterior de auditoría
           </button>
-          <span>Page {page.page}</span>
+          <span>Página {page.page}</span>
           <button
             disabled={busy || page.page * page.pageSize >= page.total}
             onClick={() => {
               void load(page.page + 1);
             }}
           >
-            Next audit page
+            Página siguiente de auditoría
           </button>
         </nav>
       )}

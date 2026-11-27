@@ -1,0 +1,223 @@
+:root {
+  --color-gold: #ffc145;
+  --color-sky: #2d9cdb;
+  --color-navy: #1b4f72;
+  --color-cream: #fdf6e3;
+  --color-ink: #2c3e50;
+  --color-surface: #fff;
+  --color-muted: #536578;
+  --color-border: #dce3e8;
+  --color-soft: #f5f8fa;
+  --color-error: #a52a27;
+  --color-error-soft: #fff1ee;
+  --color-success: #1c654d;
+  --radius: 16px;
+  --shadow: 0 10px 36px rgb(27 79 114 / 7%);
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    Arial,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--color-ink);
+  background: var(--color-cream);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+#root {
+  min-height: 100svh;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.25;
+  color: var(--color-ink);
+}
+h1 {
+  font-size: 2rem;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+h2 {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+h3 {
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+h4 {
+  font-size: 1rem;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 42px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  color: var(--color-navy);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+button:hover:not(:disabled) {
+  background: var(--color-soft);
+  border-color: #a8bccb;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+button svg,
+a svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+input,
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0.7rem 0.9rem;
+  color: var(--color-ink);
+  background: var(--color-soft);
+  border: 1px solid #c5d0d9;
+  border-radius: 9px;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #657588;
+  opacity: 1;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 2px;
+  background: var(--color-surface);
+}
+input:disabled {
+  opacity: 0.7;
+}
+input[type='checkbox'] {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-navy);
+}
+label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+a {
+  color: var(--color-navy);
+  text-underline-offset: 3px;
+}
+:focus-visible {
+  outline: 3px solid var(--color-navy);
+  outline-offset: 3px;
+}
+form {
+  display: grid;
+  gap: 0.8rem;
+}
+form label {
+  display: grid;
+  gap: 0.4rem;
+}
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+legend {
+  padding: 0 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+fieldset label:has(input[type='checkbox']),
+label:has(> input[type='checkbox']) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-weight: 400;
+  padding: 0.3rem 0;
+}
+fieldset input[type='checkbox'],
+label > input[type='checkbox'] {
+  margin-top: 0.2rem;
+}
+form button[type='submit'],
+form button:not([type]),
+.primary-button {
+  color: #fff;
+  border-color: var(--color-navy);
+  background: var(--color-navy);
+  font-weight: 600;
+}
+form button[type='submit']:hover:not(:disabled),
+form button:not([type]):hover:not(:disabled),
+.primary-button:hover:not(:disabled) {
+  color: #fff;
+  background: #153f5c;
+  border-color: #153f5c;
+  box-shadow: 0 4px 12px rgb(27 79 114 / 15%);
+}
+[role='alert'] {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+  border-radius: 9px;
+  padding: 0.85rem 1rem;
+  overflow-wrap: anywhere;
+}
+[role='status'] {
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

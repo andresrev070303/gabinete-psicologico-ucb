@@ -1,4 +1,5 @@
 import type { DirectorInvitation } from './accounts.types';
+import { formatDateTime } from '../../lib/presentation';
 export function InvitationResult({
   invitation,
   onDismiss,
@@ -12,33 +13,37 @@ export function InvitationResult({
   return (
     <div className="invitation-result" role="status">
       {invitation.delivery === 'sent' ? (
-        <p>
-          Gmail accepted the message for delivery to {invitation.account.email}.
-        </p>
+        <p>Gmail aceptó el envío del mensaje a {invitation.account.email}.</p>
       ) : invitation.delivery === 'failed' ? (
         <p>
-          The account was saved, but email delivery could not be confirmed.
-          Check sender authorization and issue a new invitation or recovery
-          link.
+          La cuenta quedó guardada, pero no pudimos confirmar el envío del
+          correo. Revisa la configuración del remitente y emite una nueva
+          invitación o recuperación.
         </p>
       ) : (
-        <p>Deliver this private, one-use link to {invitation.account.email}.</p>
+        <p>
+          Entrega este enlace privado de un solo uso a{' '}
+          {invitation.account.email}.
+        </p>
       )}
-      <p>Expires: {new Date(invitation.expiresAt).toLocaleString()}.</p>
+      <p>Vence: {formatDateTime(invitation.expiresAt)}.</p>
       {link && (
         <>
-          <p>This manual test link is shown only in this response.</p>
+          <p>
+            Este enlace de prueba manual se muestra únicamente en esta
+            respuesta.
+          </p>
           <label>
-            Activation link
+            Enlace de activación
             <input readOnly value={link} />
           </label>
           <a href={link} target="_blank" rel="noopener noreferrer">
-            Open activation page
+            Abrir página de activación
           </a>
         </>
       )}
       <button type="button" onClick={onDismiss}>
-        {link ? 'Dismiss link' : 'Dismiss message'}
+        {link ? 'Ocultar enlace' : 'Cerrar mensaje'}
       </button>
     </div>
   );

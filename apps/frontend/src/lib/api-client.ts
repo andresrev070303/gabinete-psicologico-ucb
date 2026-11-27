@@ -8,7 +8,7 @@ export function apiRequest(
   const endpoint = getApiEndpoint(path);
   if (endpoint.origin !== globalThis.location.origin)
     throw new Error(
-      'Authentication requires a same-origin API. Set VITE_API_URL=/api.',
+      'Configura VITE_API_URL=/api para ingresar desde el mismo sitio.',
     );
   return fetch(endpoint, {
     ...options,

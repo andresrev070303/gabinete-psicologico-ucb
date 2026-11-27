@@ -81,11 +81,11 @@ describe('Account management API', () => {
     );
   });
   it.each([
-    [403, 'reauthentication_required', 'Sign out and sign in again'],
-    [409, 'email_conflict', 'already uses'],
-    [400, 'invalid_activation', 'invalid, expired or already used'],
-    [503, 'unavailable', 'temporarily unavailable'],
-    [401, 'unauthenticated', 'session has expired'],
+    [403, 'reauthentication_required', 'cierra sesión e ingresa nuevamente'],
+    [409, 'email_conflict', 'Ya existe una cuenta'],
+    [400, 'invalid_activation', 'inválido, venció o ya fue utilizado'],
+    [503, 'unavailable', 'no está disponible temporalmente'],
+    [401, 'unauthenticated', 'Tu sesión venció'],
   ])('explains HTTP %s safely', async (status, code, message) => {
     fetchMock.mockResolvedValueOnce(
       Response.json(
@@ -103,7 +103,7 @@ describe('Account management API', () => {
   ])('rejects malformed account lists', async (body) => {
     fetchMock.mockResolvedValueOnce(Response.json(body));
     await expect(listAccounts(1, new AbortController().signal)).rejects.toThrow(
-      'unexpected account list',
+      'lista de cuentas inesperada',
     );
   });
   it('removes the activation fragment before the app mounts without making a request', () => {

@@ -7,6 +7,11 @@ import { OperationalRoleFields } from './OperationalRoleFields';
 import { selectedRoles } from './operational-roles';
 import { InvitationResult } from './InvitationResult';
 import { AccountEditor } from './AccountEditor';
+import {
+  getAccountStatusLabel,
+  getRoleSummary,
+  getUserError,
+} from '../../lib/presentation';
 import type {
   AccountPage,
   AccountSummary,
@@ -25,12 +30,7 @@ export function AccountsPanel({
   const [selected, setSelected] = useState<AccountSummary | null>(null);
   const [managed, setManaged] = useState<AccountSummary | null>(null);
   const active = useRef<AbortController | null>(null);
-  const fail = (failure: unknown) =>
-    setError(
-      failure instanceof Error
-        ? failure.message
-        : 'The operation failed. Try again.',
-    );
+  const fail = (failure: unknown) => setError(getUserError(failure));
   async function fetchPage(page: number, controller: AbortController) {
     try {
       const result = await listAccounts(page, controller.signal);
@@ -61,11 +61,7 @@ export function AccountsPanel({
       },
       (failure: unknown) => {
         if (!controller.signal.aborted) {
-          setError(
-            failure instanceof Error
-              ? failure.message
-              : 'The operation failed. Try again.',
-          );
+          setError(getUserError(failure));
           setBusy(false);
         }
       },
@@ -138,14 +134,14 @@ export function AccountsPanel({
       aria-labelledby="accounts-title"
       aria-busy={busy}
     >
-      <h2 id="accounts-title">Accounts</h2>
+      <h2 id="accounts-title">Usuarios</h2>
       {error && <p role="alert">{error}</p>}
       {canInvite && (
         <form
           aria-label={
             canInviteOperational
-              ? 'Invite operational account'
-              : 'Invite director candidate'
+              ? 'Invitar cuenta del equipo'
+              : 'Invitar candidato a Director'
           }
           onSubmit={(event) => {
             void invite(event);
@@ -153,11 +149,11 @@ export function AccountsPanel({
         >
           <h3>
             {canInviteOperational
-              ? 'Invite an operational account'
-              : 'Invite a director candidate'}
+              ? 'Invitar a una persona al equipo'
+              : 'Invitar a un candidato a Director'}
           </h3>
           <label>
-            Given names
+            Nombres
             <input
               name="givenNames"
               autoComplete="off"
@@ -167,7 +163,7 @@ export function AccountsPanel({
             />
           </label>
           <label>
-            Family names
+            Apellidos
             <input
               name="familyNames"
               autoComplete="off"
@@ -177,7 +173,7 @@ export function AccountsPanel({
             />
           </label>
           <label>
-            Email address
+            Correo electrónico
             <input
               name="email"
               type="email"
@@ -189,7 +185,7 @@ export function AccountsPanel({
           </label>
           {canInviteOperational && <OperationalRoleFields disabled={busy} />}
           <button type="submit" disabled={busy}>
-            Create invitation
+            Crear invitación
           </button>
         </form>
       )}
@@ -206,18 +202,18 @@ export function AccountsPanel({
           void load(accounts?.page ?? 1);
         }}
       >
-        Refresh accounts
+        Actualizar cuentas
       </button>
       <div className="accounts-table">
         <table>
-          <caption>Accounts visible to your role</caption>
+          <caption>Cuentas disponibles para tu perfil</caption>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Roles</th>
-              <th>Action</th>
+              <th>Nombre</th>
+              <th>Correo electrónico</th>
+              <th>Estado</th>
+              <th>Perfiles</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -227,8 +223,14 @@ export function AccountsPanel({
                   {account.givenNames} {account.familyNames}
                 </td>
                 <td>{account.email}</td>
-                <td>{account.status}</td>
-                <td>{account.roles.join(', ') || 'No assigned roles'}</td>
+                <td>
+                  <span
+                    className={`account-status account-status--${account.status}`}
+                  >
+                    {getAccountStatusLabel(account.status)}
+                  </span>
+                </td>
+                <td>{getRoleSummary(account.roles)}</td>
                 <td>
                   {((account.managementKind === 'operational' &&
                     identity.roles.includes('director')) ||
@@ -242,7 +244,7 @@ export function AccountsPanel({
                         setInvitation(null);
                       }}
                     >
-                      Manage account
+                      Gestionar cuenta
                     </button>
                   )}
                   {canAssign && account.canAssignDirector && (
@@ -251,7 +253,7 @@ export function AccountsPanel({
                       disabled={busy}
                       onClick={() => setSelected(account)}
                     >
-                      Assign director
+                      Designar Director
                     </button>
                   )}
                 </td>
@@ -261,10 +263,10 @@ export function AccountsPanel({
         </table>
       </div>
       {accounts && accounts.total === 0 && (
-        <p>No accounts are visible to your role.</p>
+        <p>No hay cuentas disponibles para tu perfil.</p>
       )}
       {accounts && (
-        <nav aria-label="Account pages">
+        <nav aria-label="Páginas de cuentas">
           <button
             type="button"
             disabled={busy || accounts.page === 1}
@@ -272,9 +274,9 @@ export function AccountsPanel({
               void load(accounts.page - 1);
             }}
           >
-            Previous
+            Anterior
           </button>
-          <span>Page {accounts.page}</span>
+          <span>Página {accounts.page}</span>
           <button
             type="button"
             disabled={
@@ -284,7 +286,7 @@ export function AccountsPanel({
               void load(accounts.page + 1);
             }}
           >
-            Next
+            Siguiente
           </button>
         </nav>
       )}
@@ -301,11 +303,12 @@ export function AccountsPanel({
       {selected && (
         <fieldset>
           <legend>
-            Assign {selected.givenNames} {selected.familyNames} as director?
+            ¿Designar a {selected.givenNames} {selected.familyNames} como
+            Director?
           </legend>
           <p>
-            This replaces the current director and signs the affected accounts
-            out.
+            Esta acción reemplaza al Director actual y cierra las sesiones de
+            las cuentas afectadas.
           </p>
           <button
             type="button"
@@ -314,14 +317,14 @@ export function AccountsPanel({
               void designate();
             }}
           >
-            Confirm director assignment
+            Confirmar designación del Director
           </button>
           <button
             type="button"
             disabled={busy}
             onClick={() => setSelected(null)}
           >
-            Cancel
+            Cancelar
           </button>
         </fieldset>
       )}

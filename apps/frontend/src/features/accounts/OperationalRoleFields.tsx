@@ -1,9 +1,5 @@
 import { operationalRoles } from './operational-roles';
-const labels = {
-  psychologist: 'Psychologist',
-  assistant: 'Student assistant',
-  degree_student: 'Degree student',
-};
+import { getRoleLabel } from '../../lib/presentation';
 export function OperationalRoleFields({
   roles = ['psychologist'],
   disabled = false,
@@ -13,7 +9,7 @@ export function OperationalRoleFields({
 }) {
   return (
     <fieldset disabled={disabled}>
-      <legend>Operational roles</legend>
+      <legend>Perfiles operativos</legend>
       {operationalRoles.map((role) => (
         <label key={role}>
           <input
@@ -22,7 +18,7 @@ export function OperationalRoleFields({
             value={role}
             defaultChecked={roles.includes(role)}
           />
-          {labels[role]}
+          {getRoleLabel(role)}
         </label>
       ))}
     </fieldset>

@@ -45,13 +45,15 @@ describe('Account management panels', () => {
     vi.unstubAllEnvs();
   });
   function fillPasswords(confirmation = 'a long testing passphrase') {
-    fireEvent.change(screen.getByLabelText('New password'), {
+    fireEvent.change(screen.getByLabelText('Nueva contraseña'), {
       target: { value: 'a long testing passphrase' },
     });
-    fireEvent.change(screen.getByLabelText('Repeat password'), {
+    fireEvent.change(screen.getByLabelText('Repetir contraseña'), {
       target: { value: confirmation },
     });
-    fireEvent.submit(screen.getByRole('form', { name: 'Account activation' }));
+    fireEvent.submit(
+      screen.getByRole('form', { name: 'Activación de cuenta' }),
+    );
   }
   it('activates an account without signing it in automatically', async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
@@ -59,17 +61,19 @@ describe('Account management panels', () => {
     render(<ActivationPanel token="private-token" onComplete={complete} />);
     fillPasswords();
     expect((await screen.findByRole('status')).textContent).toContain(
-      'Your account is active',
+      'Tu contraseña quedó establecida',
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Go to sign in' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ir al inicio de sesión' }),
+    );
     expect(complete).toHaveBeenCalledOnce();
   });
   it('rejects mismatched passwords locally and reports an unusable link', async () => {
     render(<ActivationPanel token="private-token" onComplete={() => {}} />);
     fillPasswords('different');
     expect(screen.getByRole('alert').textContent).toBe(
-      'The passwords must match.',
+      'Las contraseñas deben coincidir.',
     );
     expect(fetchMock).not.toHaveBeenCalled();
     fetchMock.mockResolvedValueOnce(
@@ -77,10 +81,12 @@ describe('Account management panels', () => {
     );
     fillPasswords();
     await waitFor(() =>
-      expect(screen.getByRole('alert').textContent).toContain('already used'),
+      expect(screen.getByRole('alert').textContent).toContain(
+        'ya fue utilizado',
+      ),
     );
     expect(
-      (screen.getByLabelText('New password') as HTMLInputElement).value,
+      (screen.getByLabelText('Nueva contraseña') as HTMLInputElement).value,
     ).toBe('');
   });
   it('creates a private invitation and lets the administrator dismiss its secret', async () => {
@@ -96,23 +102,23 @@ describe('Account management panels', () => {
     );
     fetchMock.mockResolvedValueOnce(Response.json(page));
     render(<AccountsPanel identity={administrator} />);
-    await screen.findByText('No accounts are visible to your role.');
-    fireEvent.change(screen.getByLabelText('Given names'), {
+    await screen.findByText('No hay cuentas disponibles para tu perfil.');
+    fireEvent.change(screen.getByLabelText('Nombres'), {
       target: { value: 'Test' },
     });
-    fireEvent.change(screen.getByLabelText('Family names'), {
+    fireEvent.change(screen.getByLabelText('Apellidos'), {
       target: { value: 'Candidate' },
     });
-    fireEvent.change(screen.getByLabelText('Email address'), {
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), {
       target: { value: account.email },
     });
     fireEvent.submit(
-      screen.getByRole('form', { name: 'Invite director candidate' }),
+      screen.getByRole('form', { name: 'Invitar candidato a Director' }),
     );
-    const link = await screen.findByLabelText('Activation link');
+    const link = await screen.findByLabelText('Enlace de activación');
     expect((link as HTMLInputElement).value).toContain('/#activate=');
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss link' }));
-    expect(screen.queryByLabelText('Activation link')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ocultar enlace' }));
+    expect(screen.queryByLabelText('Enlace de activación')).toBeNull();
   });
   it('requires confirmation before replacing the director and refreshes the list', async () => {
     fetchMock.mockResolvedValueOnce(Response.json(page));
@@ -125,15 +131,17 @@ describe('Account management panels', () => {
     );
     render(<AccountsPanel identity={administrator} />);
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Assign director' }),
+      await screen.findByRole('button', { name: 'Designar Director' }),
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
     fireEvent.click(
-      screen.getByRole('button', { name: 'Confirm director assignment' }),
+      screen.getByRole('button', {
+        name: 'Confirmar designación del Director',
+      }),
     );
-    await screen.findByText('director');
+    await screen.findByText('Director');
     expect(
-      screen.queryByRole('button', { name: 'Assign director' }),
+      screen.queryByRole('button', { name: 'Designar Director' }),
     ).toBeNull();
   });
   it('does not expose administrative controls to the director', async () => {
@@ -150,7 +158,7 @@ describe('Account management panels', () => {
     await screen.findByText('Test Candidate');
     expect(screen.queryByRole('form')).toBeNull();
     expect(
-      screen.queryByRole('button', { name: 'Assign director' }),
+      screen.queryByRole('button', { name: 'Designar Director' }),
     ).toBeNull();
   });
   it('reports an unavailable account list and allows retrying', async () => {
@@ -158,7 +166,7 @@ describe('Account management panels', () => {
     fetchMock.mockResolvedValueOnce(Response.json(page));
     render(<AccountsPanel identity={administrator} />);
     await screen.findByRole('alert');
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh accounts' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actualizar cuentas' }));
     await screen.findByText('Test Candidate');
   });
 });

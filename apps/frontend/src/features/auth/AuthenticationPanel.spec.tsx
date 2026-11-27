@@ -42,24 +42,25 @@ describe('AuthenticationPanel', () => {
     render(<AuthenticationPanel />);
     await waitFor(() =>
       expect(
-        (screen.getByLabelText('Email') as HTMLInputElement).disabled,
+        (screen.getByLabelText('Correo electrónico') as HTMLInputElement)
+          .disabled,
       ).toBe(false),
     );
-    fireEvent.change(screen.getByLabelText('Email'), {
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), {
       target: { value: 'admin@example.test' },
     });
-    fireEvent.change(screen.getByLabelText('Password'), {
+    fireEvent.change(screen.getByLabelText('Contraseña'), {
       target: { value: 'exact password' },
     });
-    fireEvent.submit(screen.getByRole('form', { name: 'Sign in' }));
+    fireEvent.submit(screen.getByRole('form', { name: 'Ingresar' }));
   }
 
   it('restores a persisted identity after reloading the page', async () => {
     fetchMock.mockResolvedValueOnce(Response.json(authenticated));
     render(<AuthenticationPanel />);
     expect(await screen.findByText('Test Admin')).toBeDefined();
-    expect(screen.getByText('Roles: administrator')).toBeDefined();
-    expect(screen.queryByLabelText('Password')).toBeNull();
+    expect(screen.getByText('Perfiles: Administrador')).toBeDefined();
+    expect(screen.queryByLabelText('Contraseña')).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -75,8 +76,8 @@ describe('AuthenticationPanel', () => {
         password: 'exact password',
       }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
-    const field = await screen.findByLabelText('Password');
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+    const field = await screen.findByLabelText('Contraseña');
     expect((field as HTMLInputElement).value).toBe('');
     expect(screen.queryByText('Test Admin')).toBeNull();
   });
@@ -86,16 +87,16 @@ describe('AuthenticationPanel', () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
     await signInForm();
     expect((await screen.findByRole('alert')).textContent).toBe(
-      'Invalid email or password.',
-    );
-    expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe(
-      '',
-    );
-    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe(
-      'admin@example.test',
+      'El correo electrónico o la contraseña son incorrectos.',
     );
     expect(
-      (screen.getByRole('button', { name: 'Sign in' }) as HTMLButtonElement)
+      (screen.getByLabelText('Contraseña') as HTMLInputElement).value,
+    ).toBe('');
+    expect(
+      (screen.getByLabelText('Correo electrónico') as HTMLInputElement).value,
+    ).toBe('admin@example.test');
+    expect(
+      (screen.getByRole('button', { name: 'Ingresar' }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
   });
@@ -104,11 +105,12 @@ describe('AuthenticationPanel', () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
     render(<AuthenticationPanel />);
     expect((await screen.findByRole('alert')).textContent).toBe(
-      'Authentication is temporarily unavailable.',
+      'El acceso no está disponible temporalmente.',
     );
-    expect((screen.getByLabelText('Email') as HTMLInputElement).disabled).toBe(
-      false,
-    );
+    expect(
+      (screen.getByLabelText('Correo electrónico') as HTMLInputElement)
+        .disabled,
+    ).toBe(false);
   });
 
   it('keeps the current identity when sign-out fails so the user can retry', async () => {
@@ -116,12 +118,15 @@ describe('AuthenticationPanel', () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
     render(<AuthenticationPanel />);
     await screen.findByText('Test Admin');
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     await screen.findByRole('alert');
     expect(screen.getByText('Test Admin')).toBeDefined();
     expect(
-      (screen.getByRole('button', { name: 'Sign out' }) as HTMLButtonElement)
-        .disabled,
+      (
+        screen.getByRole('button', {
+          name: 'Cerrar sesión',
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(false);
   });
 
@@ -139,5 +144,33 @@ describe('AuthenticationPanel', () => {
     const panel = render(<AuthenticationPanel />);
     panel.unmount();
     expect(fetchMock.mock.calls[0]![1]?.signal?.aborted).toBe(true);
+  });
+
+  it('toggles password visibility and explains invitation access without issuing extra requests', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 401 }));
+    render(<AuthenticationPanel />);
+    const toggle = await screen.findByRole('button', {
+      name: 'Mostrar contraseña',
+    });
+    await waitFor(() =>
+      expect((toggle as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.change(screen.getByLabelText('Contraseña'), {
+      target: { value: 'private test phrase' },
+    });
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText('Contraseña').getAttribute('type')).toBe(
+      'text',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ocultar contraseña' }));
+    expect(screen.getByLabelText('Contraseña').getAttribute('type')).toBe(
+      'password',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: '¿Necesitas ayuda para ingresar?' }),
+    );
+    expect(screen.getByText(/El acceso es por invitación/u)).toBeDefined();
+    expect(screen.queryByRole('link', { name: /registro/iu })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
