@@ -781,15 +781,19 @@ export const instrumentApplicationInEvaluation = evaluation.table("instrument_ap
 export const placementInPracticum = practicum.table("placement", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	studentPersonId: uuid("student_person_id").notNull(),
-	termId: uuid("term_id").notNull(),
-	supervisorAccountId: uuid("supervisor_account_id").notNull(),
-	placementKind: varchar("placement_kind", { length: 25 }).notNull(),
+	termId: uuid("term_id"),
+	supervisorAccountId: uuid("supervisor_account_id"),
+	placementKind: varchar("placement_kind", { length: 25 }),
 	startedOn: date("started_on"),
 	endedOn: date("ended_on"),
-	placementStatus: varchar("placement_status", { length: 20 }).default('planned').notNull(),
+	versionNo: integer("version_no").default(1).notNull(),
+	changeReason: varchar("change_reason", { length: 500 }),
+	placementStatus: varchar("placement_status", { length: 20 }).default('active').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
+	check("placement_version_check", sql`version_no > 0`),
+	uniqueIndex("one_practice_per_student").on(table.studentPersonId),
 	index("placement_student_term_idx").using("btree", table.studentPersonId.asc().nullsLast(), table.termId.asc().nullsLast()),
 	foreignKey({
 			columns: [table.studentPersonId],
@@ -808,7 +812,7 @@ export const placementInPracticum = practicum.table("placement", {
 		}).onDelete("restrict"),
 	check("placement_check", sql`(ended_on IS NULL) OR (started_on IS NULL) OR (ended_on >= started_on)`),
 	check("placement_placement_kind_check", sql`(placement_kind)::text = ANY ((ARRAY['assistant'::character varying, 'intern'::character varying, 'course_practice'::character varying, 'other'::character varying])::text[])`),
-	check("placement_placement_status_check", sql`(placement_status)::text = ANY ((ARRAY['planned'::character varying, 'active'::character varying, 'completed'::character varying, 'withdrawn'::character varying])::text[])`),
+	check("placement_placement_status_check", sql`(placement_status)::text = ANY ((ARRAY['active'::character varying, 'completed'::character varying])::text[])`),
 ]);
 
 export const academicTermInPracticum = practicum.table("academic_term", {
@@ -890,41 +894,110 @@ export const performanceReviewInPracticum = practicum.table("performance_review"
 		}).onDelete("restrict"),
 ]);
 
-export const activityLogInPracticum = practicum.table("activity_log", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	placementId: uuid("placement_id").notNull(),
-	caseId: uuid("case_id"),
-	activityKind: varchar("activity_kind", { length: 70 }).notNull(),
-	description: text(),
-	startedAt: timestamp("started_at", { withTimezone: true, mode: 'string' }).notNull(),
-	endedAt: timestamp("ended_at", { withTimezone: true, mode: 'string' }).notNull(),
-	approvalStatus: varchar("approval_status", { length: 18 }).default('pending').notNull(),
-	approvedByAccountId: uuid("approved_by_account_id"),
-	approvedAt: timestamp("approved_at", { withTimezone: true, mode: 'string' }),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-}, (table) => [
-	index("activity_log_placement_idx").using("btree", table.placementId.asc().nullsLast(), table.startedAt.desc().nullsFirst()),
-	foreignKey({
-			columns: [table.approvedByAccountId],
-			foreignColumns: [accountInIam.id],
-			name: "activity_log_approved_by_account_id_fkey"
-		}).onDelete("restrict"),
-	foreignKey({
-			columns: [table.caseId],
-			foreignColumns: [caseFileInCare.id],
-			name: "activity_log_case_id_fkey"
-		}).onDelete("restrict"),
-	foreignKey({
-			columns: [table.placementId],
-			foreignColumns: [placementInPracticum.id],
-			name: "activity_log_placement_id_fkey"
-		}).onDelete("restrict"),
-	check("activity_approval_evidence", sql`((approval_status)::text <> 'approved'::text) OR ((approved_by_account_id IS NOT NULL) AND (approved_at IS NOT NULL))`),
-	check("activity_log_approval_status_check", sql`(approval_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[])`),
-	check("activity_log_check", sql`ended_at > started_at`),
-	check("activity_log_check1", sql`(approved_at IS NULL) OR (approved_by_account_id IS NOT NULL)`),
-]);
+export const activityLogInPracticum = practicum.table(
+  'activity_log',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    placementId: uuid('placement_id').notNull(),
+    caseId: uuid('case_id'),
+    studentPersonId: uuid('student_person_id')
+      .notNull()
+      .references(() => personInCore.id, { onDelete: 'restrict' }),
+    taskId: uuid('task_id'),
+    taskTitle: varchar('task_title', { length: 180 }).notNull(),
+    projectLabel: varchar('project_label', { length: 180 })
+      .default('Gabinete')
+      .notNull(),
+    entrySource: varchar('entry_source', { length: 10 })
+      .default('manual')
+      .notNull(),
+    versionNo: integer('version_no').default(1).notNull(),
+    voidedAt: timestamp('voided_at', { withTimezone: true, mode: 'string' }),
+    changeReason: varchar('change_reason', { length: 500 }),
+    activityKind: varchar('activity_kind', { length: 70 }).notNull(),
+    description: text(),
+    startedAt: timestamp('started_at', {
+      withTimezone: true,
+      mode: 'string',
+    }).notNull(),
+    endedAt: timestamp('ended_at', { withTimezone: true, mode: 'string' }),
+    approvalStatus: varchar('approval_status', { length: 18 })
+      .default('recorded')
+      .notNull(),
+    approvedByAccountId: uuid('approved_by_account_id'),
+    approvedAt: timestamp('approved_at', {
+      withTimezone: true,
+      mode: 'string',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('one_running_practice_timer')
+      .on(table.studentPersonId)
+      .where(sql`ended_at IS NULL AND voided_at IS NULL`),
+    index('practice_entry_page_idx').on(
+      table.placementId,
+      table.startedAt.desc(),
+      table.id.desc(),
+    ),
+    foreignKey({
+      columns: [table.taskId, table.placementId],
+      foreignColumns: [workTaskInPracticum.id, workTaskInPracticum.placementId],
+      name: 'activity_task_placement_fk',
+    }).onDelete('restrict'),
+    check(
+      'activity_log_entry_source_check',
+      sql`entry_source IN ('manual','timer')`,
+    ),
+    check('activity_log_version_no_check', sql`version_no > 0`),
+    check(
+      'manual_entry_needs_end',
+      sql`entry_source='timer' OR ended_at IS NOT NULL`,
+    ),
+    check(
+      'voided_entry_needs_reason',
+      sql`voided_at IS NULL OR length(btrim(change_reason)) BETWEEN 5 AND 500`,
+    ),
+    index('activity_log_placement_idx').using(
+      'btree',
+      table.placementId.asc().nullsLast(),
+      table.startedAt.desc().nullsFirst(),
+    ),
+    foreignKey({
+      columns: [table.approvedByAccountId],
+      foreignColumns: [accountInIam.id],
+      name: 'activity_log_approved_by_account_id_fkey',
+    }).onDelete('restrict'),
+    foreignKey({
+      columns: [table.caseId],
+      foreignColumns: [caseFileInCare.id],
+      name: 'activity_log_case_id_fkey',
+    }).onDelete('restrict'),
+    foreignKey({
+      columns: [table.placementId],
+      foreignColumns: [placementInPracticum.id],
+      name: 'activity_log_placement_id_fkey',
+    }).onDelete('restrict'),
+    check(
+      'activity_approval_evidence',
+      sql`((approval_status)::text <> 'approved'::text) OR ((approved_by_account_id IS NOT NULL) AND (approved_at IS NOT NULL))`,
+    ),
+    check(
+      'activity_log_approval_status_check',
+      sql`(approval_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'recorded'::character varying])::text[])`,
+    ),
+    check('activity_log_check', sql`ended_at > started_at`),
+    check(
+      'activity_log_check1',
+      sql`(approved_at IS NULL) OR (approved_by_account_id IS NOT NULL)`,
+    ),
+  ],
+);
 
 export const agreementInProjects = projects.table("agreement", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -1685,3 +1758,116 @@ export const identityEventInAudit = audit.table('identity_event', {
   check('identity_event_action_check',sql`action IN ('operational_invited','profile_updated','roles_changed','account_disabled','account_reinvited','password_reset_issued','account_activation','password_reset','session_revoked','password_changed','password_change_failed','contact_updated')`),
   check('identity_event_reason',sql`(action='account_disabled' AND length(trim(reason)) BETWEEN 5 AND 240 AND reason IS NOT NULL) OR (action<>'account_disabled' AND reason IS NULL)`),
 ]);
+
+
+export const workTaskInPracticum = practicum.table(
+  'work_task',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    placementId: uuid('placement_id')
+      .notNull()
+      .references(() => placementInPracticum.id, { onDelete: 'restrict' }),
+    title: varchar({ length: 180 }).notNull(),
+    projectLabel: varchar('project_label', { length: 180 }).notNull(),
+    activityKind: varchar('activity_kind', { length: 70 }).notNull(),
+    description: varchar({ length: 2000 }),
+    taskStatus: varchar('task_status', { length: 20 })
+      .default('active')
+      .notNull(),
+    assignedByDirector: boolean('assigned_by_director')
+      .default(false)
+      .notNull(),
+    versionNo: integer('version_no').default(1).notNull(),
+    changeReason: varchar('change_reason', { length: 500 }),
+    createdByAccountId: uuid('created_by_account_id')
+      .notNull()
+      .references(() => accountInIam.id, { onDelete: 'restrict' }),
+    updatedByAccountId: uuid('updated_by_account_id').references(
+      () => accountInIam.id,
+      { onDelete: 'restrict' },
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+  },
+  (table) => [
+    index('work_task_placement_idx').on(table.placementId, table.id.desc()),
+    unique('work_task_id_placement_key').on(table.id, table.placementId),
+    check('work_task_title_check', sql`length(btrim(title)) BETWEEN 3 AND 180`),
+    check(
+      'work_task_project_label_check',
+      sql`length(btrim(project_label)) BETWEEN 1 AND 180`,
+    ),
+    check(
+      'work_task_activity_kind_check',
+      sql`activity_kind IN ('administration','direct_care','evaluation_support','workshop','research','training','other')`,
+    ),
+    check(
+      'work_task_task_status_check',
+      sql`task_status IN ('active','completed','archived')`,
+    ),
+    check('work_task_version_no_check', sql`version_no > 0`),
+  ],
+);
+
+export const timeEntryRevisionInPracticum = practicum.table(
+  'time_entry_revision',
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    entryId: uuid('entry_id')
+      .notNull()
+      .references(() => activityLogInPracticum.id, { onDelete: 'restrict' }),
+    action: varchar({ length: 20 }).notNull(),
+    changedAt: timestamp('changed_at', { withTimezone: true, mode: 'string' })
+      .default(sql`clock_timestamp()`)
+      .notNull(),
+    reason: varchar({ length: 500 }).notNull(),
+    previousStartedAt: timestamp('previous_started_at', {
+      withTimezone: true,
+      mode: 'string',
+    }).notNull(),
+    previousEndedAt: timestamp('previous_ended_at', {
+      withTimezone: true,
+      mode: 'string',
+    }),
+    previousDescription: text('previous_description'),
+    previousTaskId: uuid('previous_task_id'),
+    previousTaskTitle: varchar('previous_task_title', { length: 180 }),
+    previousProjectLabel: varchar('previous_project_label', { length: 180 }),
+    actorAccountId: uuid('actor_account_id').references(() => accountInIam.id, {
+      onDelete: 'restrict',
+    }),
+    authSessionId: uuid('auth_session_id'),
+    requestId: uuid('request_id').notNull(),
+    systemActor: text('system_actor'),
+  },
+  (table) => [
+    index('time_entry_revision_entry_idx').on(
+      table.entryId,
+      table.changedAt.desc(),
+      table.id.desc(),
+    ),
+    check(
+      'time_entry_revision_action_check',
+      sql`action IN ('stopped','corrected','voided')`,
+    ),
+    foreignKey({
+      columns: [table.authSessionId, table.actorAccountId],
+      foreignColumns: [authSessionInIam.id, authSessionInIam.accountId],
+      name: 'time_entry_revision_auth_session_id_actor_account_id_fkey',
+    }).onDelete('restrict'),
+  ],
+);
+
+export const vPracticumRecordedHoursInReporting = reporting
+  .view('v_practicum_recorded_hours', {
+    placementId: uuid('placement_id'),
+    studentPersonId: uuid('student_person_id'),
+    totalSeconds: bigint('total_seconds', { mode: 'bigint' }),
+  })
+  .as(
+    sql`SELECT p.id AS placement_id,p.student_person_id,floor(COALESCE(sum(extract(epoch FROM (l.ended_at-l.started_at))) FILTER(WHERE l.voided_at IS NULL AND l.ended_at IS NOT NULL),0))::bigint AS total_seconds FROM practicum.placement p LEFT JOIN practicum.activity_log l ON l.placement_id=p.id GROUP BY p.id,p.student_person_id`,
+  );

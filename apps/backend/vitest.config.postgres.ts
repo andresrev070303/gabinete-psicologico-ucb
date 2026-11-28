@@ -15,7 +15,10 @@ export default defineConfig({
     testTimeout: 30000,
     coverage: {
       provider: 'v8',
-      include: ['src/modules/identity/**/*.ts'],
+      include: [
+        'src/modules/identity/**/*.ts',
+        'src/modules/practicum/**/*.ts',
+      ],
       exclude: ['src/**/*.spec.ts'],
       reportsDirectory: './coverage/postgres',
       reporter: ['text', ['lcov', { projectRoot: repositoryRoot }]],

@@ -20,8 +20,8 @@ describe('Workspace navigation', () => {
   it.each([
     ['director', ['practicum', 'institutional', 'reports']],
     ['psychologist', ['agenda', 'cases', 'supervisions']],
-    ['assistant', ['tasks', 'hours', 'my-practice']],
-    ['degree_student', ['project', 'tasks', 'documents']],
+    ['assistant', ['hours', 'my-practice']],
+    ['degree_student', ['project', 'hours', 'documents']],
   ])(
     'prepares the %s workspace without exposing unfinished operations',
     (role, expected) => {
@@ -51,7 +51,11 @@ describe('Workspace navigation', () => {
     const items = getNavigation(
       identity(['assistant', 'degree_student', 'psychologist']),
     );
-    expect(items.filter((item) => item.id === 'tasks')).toHaveLength(1);
+    expect(items.filter((item) => item.id === 'tasks')).toHaveLength(0);
+    expect(items.filter((item) => item.id === 'hours')).toHaveLength(1);
+    expect(items.find((item) => item.id === 'hours')?.label).toBe(
+      'Mis actividades y horas',
+    );
     expect(items.filter((item) => item.id === 'cases')).toHaveLength(1);
     expect(items.find((item) => item.id === 'system')).toBeUndefined();
     expect(items.find((item) => item.id === 'project')).toBeDefined();

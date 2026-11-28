@@ -6,6 +6,10 @@ import { WorkspaceContent } from './WorkspaceContent';
 import { WorkspaceSidebar } from './WorkspaceSidebar';
 import { getNavigation } from './navigation';
 import type { WorkspaceSection } from './navigation';
+import {
+  PracticumTimerBar,
+  PracticumTimerProvider,
+} from '../practicum/PracticumTimer';
 
 export function Workspace({
   identity,
@@ -57,94 +61,97 @@ export function Workspace({
   };
 
   return (
-    <div className="workspace-shell">
-      <a className="skip-link" href="#workspace-content">
-        Saltar al contenido
-      </a>
-      <aside className="workspace-sidebar">
-        <WorkspaceSidebar {...sidebarProps} />
-      </aside>
-      <dialog
-        ref={mobileNavigation}
-        className="mobile-navigation"
-        id="mobile-navigation"
-        aria-label="Menú de navegación"
-        onClose={handleMenuClosed}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) closeMenu();
-        }}
-      >
-        <div className="mobile-navigation-content">
-          <WorkspaceSidebar {...sidebarProps} mobile />
-        </div>
-      </dialog>
-      <div className="workspace-main">
-        <header className="workspace-header">
-          <div className="header-location">
-            <button
-              ref={menuButton}
-              type="button"
-              className="icon-button mobile-menu-button"
-              aria-label="Abrir menú"
-              aria-expanded={menuOpen}
-              aria-controls="mobile-navigation"
-              onClick={openMenu}
-            >
-              <Icon name="menu" />
-            </button>
-            <span>Gabinete de Servicios Psicológicos</span>
-          </div>
-          <button
-            className="user-summary"
-            type="button"
-            onClick={() => navigate('profile')}
-            aria-label="Abrir mi cuenta"
-          >
-            <span className="user-avatar" aria-hidden="true">
-              {initials}
-            </span>
-            <span>
-              <strong>
-                {identity.givenNames} {identity.familyNames}
-              </strong>
-              <small>{roleSummary}</small>
-            </span>
-          </button>
-        </header>
-        <main
-          id="workspace-content"
-          className="workspace-content"
-          tabIndex={-1}
+    <PracticumTimerProvider identity={identity}>
+      <div className="workspace-shell">
+        <a className="skip-link" href="#workspace-content">
+          Saltar al contenido
+        </a>
+        <aside className="workspace-sidebar">
+          <WorkspaceSidebar {...sidebarProps} />
+        </aside>
+        <dialog
+          ref={mobileNavigation}
+          className="mobile-navigation"
+          id="mobile-navigation"
+          aria-label="Menú de navegación"
+          onClose={handleMenuClosed}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) closeMenu();
+          }}
         >
-          <div className="page-heading">
-            <div>
-              <span className="eyebrow">TU GABINETE, EN UN MISMO LUGAR</span>
-              <h1 ref={contentHeading} tabIndex={-1}>
-                {current.label}
-              </h1>
-              <p>{current.description}</p>
-            </div>
-            <span className="role-badge">{roleSummary}</span>
+          <div className="mobile-navigation-content">
+            <WorkspaceSidebar {...sidebarProps} mobile />
           </div>
-          {error && (
-            <p className="feedback" role="alert">
-              {error}
-            </p>
-          )}
-          <WorkspaceContent
-            identity={identity}
-            current={current}
-            items={items}
-            initials={initials}
-            onNavigate={navigate}
-            onSessionEnded={onSessionEnded}
-          />
-          <footer className="workspace-footer">
-            Gabinete de Servicios Psicológicos{' '}
-            <span>Universidad Católica Boliviana · Cochabamba</span>
-          </footer>
-        </main>
+        </dialog>
+        <div className="workspace-main">
+          <header className="workspace-header">
+            <div className="header-location">
+              <button
+                ref={menuButton}
+                type="button"
+                className="icon-button mobile-menu-button"
+                aria-label="Abrir menú"
+                aria-expanded={menuOpen}
+                aria-controls="mobile-navigation"
+                onClick={openMenu}
+              >
+                <Icon name="menu" />
+              </button>
+              <span>Gabinete de Servicios Psicológicos</span>
+            </div>
+            <button
+              className="user-summary"
+              type="button"
+              onClick={() => navigate('profile')}
+              aria-label="Abrir mi cuenta"
+            >
+              <span className="user-avatar" aria-hidden="true">
+                {initials}
+              </span>
+              <span>
+                <strong>
+                  {identity.givenNames} {identity.familyNames}
+                </strong>
+                <small>{roleSummary}</small>
+              </span>
+            </button>
+          </header>
+          <PracticumTimerBar />
+          <main
+            id="workspace-content"
+            className="workspace-content"
+            tabIndex={-1}
+          >
+            <div className="page-heading">
+              <div>
+                <span className="eyebrow">TU GABINETE, EN UN MISMO LUGAR</span>
+                <h1 ref={contentHeading} tabIndex={-1}>
+                  {current.label}
+                </h1>
+                <p>{current.description}</p>
+              </div>
+              <span className="role-badge">{roleSummary}</span>
+            </div>
+            {error && (
+              <p className="feedback" role="alert">
+                {error}
+              </p>
+            )}
+            <WorkspaceContent
+              identity={identity}
+              current={current}
+              items={items}
+              initials={initials}
+              onNavigate={navigate}
+              onSessionEnded={onSessionEnded}
+            />
+            <footer className="workspace-footer">
+              Gabinete de Servicios Psicológicos{' '}
+              <span>Universidad Católica Boliviana · Cochabamba</span>
+            </footer>
+          </main>
+        </div>
       </div>
-    </div>
+    </PracticumTimerProvider>
   );
 }

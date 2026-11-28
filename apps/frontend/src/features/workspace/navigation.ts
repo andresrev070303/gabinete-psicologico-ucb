@@ -1,5 +1,10 @@
 import type { IconName } from '../../components/Icon';
 import type { AuthenticatedIdentity } from '../auth/auth.types';
+import {
+  canManagePractice,
+  canReadOwnPractice,
+  canReadSupervisedPractice,
+} from '../practicum/practicum-access';
 
 export type WorkspaceSection =
   | 'home'
@@ -75,8 +80,9 @@ const upcomingItems: Readonly<
     icon: 'clipboard',
   },
   hours: {
-    label: 'Mis horas',
-    description: 'Tu espacio para registrar y consultar el tiempo de práctica.',
+    label: 'Mis actividades y horas',
+    description:
+      'Crea actividades, retoma tareas y consulta tu tiempo de práctica.',
     icon: 'clock',
   },
   'my-practice': {
@@ -104,9 +110,9 @@ const sectionsByRole: Readonly<Record<string, readonly WorkspaceSection[]>> = {
     'evaluations',
     'reports',
   ],
-  psychologist: ['agenda', 'cases', 'evaluations', 'supervisions'],
-  assistant: ['tasks', 'hours', 'my-practice', 'cases'],
-  degree_student: ['project', 'tasks', 'documents'],
+  psychologist: ['agenda', 'cases', 'evaluations', 'practicum', 'supervisions'],
+  assistant: ['hours', 'my-practice', 'cases'],
+  degree_student: ['project', 'hours', 'my-practice', 'documents'],
 };
 export function getNavigation(
   identity: WorkspaceIdentity,
@@ -136,7 +142,18 @@ export function getNavigation(
   );
   for (const id of sections) {
     const item = upcomingItems[id];
-    if (item) items.push({ ...item, id, available: false });
+    if (item) {
+      const available =
+        id === 'practicum'
+          ? canManagePractice(identity) || canReadSupervisedPractice(identity)
+          : ['tasks', 'hours', 'my-practice'].includes(id) &&
+            canReadOwnPractice(identity);
+      const label =
+        id === 'practicum' && !identity.roles.includes('director')
+          ? 'Prácticas supervisadas'
+          : item.label;
+      items.push({ ...item, label, id, available });
+    }
   }
   if (identity.permissions.includes('audit.read_identity'))
     items.push({

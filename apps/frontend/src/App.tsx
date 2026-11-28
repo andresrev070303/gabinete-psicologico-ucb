@@ -4,6 +4,7 @@ import { AuthenticationPanel } from './features/auth/AuthenticationPanel';
 import { ActivationPanel } from './features/accounts/ActivationPanel';
 import { Workspace } from './features/workspace/Workspace';
 import './styles/layout.css';
+import './styles/practicum.css';
 
 export default function App({
   activationToken = null,

@@ -43,6 +43,7 @@ let databaseCreated = false;
 let roleCreated = false;
 let preservedAccount;
 let legacySessionId;
+let preservedPractice;
 const migrationsFolder = fileURLToPath(new URL('../drizzle/', import.meta.url));
 
 async function system(work) {
@@ -144,6 +145,31 @@ beforeAll(async () => {
         )
       ).rows[0].id,
   );
+  preservedPractice = await system(async (client) => {
+    const person = (
+      await client.query(
+        "INSERT INTO core.person(given_names,family_names) VALUES('Legacy','Practitioner') RETURNING id",
+      )
+    ).rows[0];
+    const term = (
+      await client.query(
+        "INSERT INTO practicum.academic_term(code,label,starts_on,ends_on) VALUES('LEGACY','Legacy term','2026-01-01','2026-12-31') RETURNING id",
+      )
+    ).rows[0];
+    const practice = (
+      await client.query(
+        "INSERT INTO practicum.placement(student_person_id,term_id,supervisor_account_id,placement_kind,placement_status,started_on,ended_on) VALUES($1,$2,$3,'intern','planned','2026-01-01','2026-12-31') RETURNING id",
+        [person.id, term.id, preservedAccount.id],
+      )
+    ).rows[0];
+    const entry = (
+      await client.query(
+        "INSERT INTO practicum.activity_log(placement_id,activity_kind,started_at,ended_at) VALUES($1,'administration','2026-01-02T12:00:00Z','2026-01-02T13:00:00Z') RETURNING id",
+        [practice.id],
+      )
+    ).rows[0];
+    return { id: practice.id, entryId: entry.id, termId: term.id };
+  });
   await migrate(drizzle(owner), { migrationsFolder });
   await admin.query(
     `CREATE ROLE "${role}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`,
@@ -205,7 +231,7 @@ test('upgrades an existing installation without replacing the administrator, pas
       'SELECT (SELECT count(*)::int FROM iam.role) AS roles,(SELECT count(*)::int FROM iam.permission) AS permissions,(SELECT count(*)::int FROM iam.role_permission) AS grants',
     )
   ).rows[0];
-  expect(catalog).toEqual({ roles: 5, permissions: 15, grants: 18 });
+  expect(catalog).toEqual({ roles: 5, permissions: 19, grants: 24 });
   const session = (
     await owner.query(
       'SELECT account_id,session_kind FROM iam.auth_session WHERE id=$1',
@@ -231,6 +257,35 @@ test('upgrades an existing installation without replacing the administrator, pas
       ),
     ).entries.length,
   );
+});
+test('preserves historical practice time while simplifying academic requirements and lifecycle states', async () => {
+  const profile = (
+    await owner.query(
+      'SELECT term_id,placement_kind,placement_status,started_on::text,ended_on::text FROM practicum.placement WHERE id=$1',
+      [preservedPractice.id],
+    )
+  ).rows[0];
+  expect(profile).toEqual({
+    term_id: preservedPractice.termId,
+    placement_kind: 'intern',
+    placement_status: 'active',
+    started_on: '2026-01-01',
+    ended_on: '2026-12-31',
+  });
+  const entry = (
+    await owner.query(
+      'SELECT placement_id,extract(epoch FROM (ended_at-started_at))::integer AS seconds FROM practicum.activity_log WHERE id=$1',
+      [preservedPractice.entryId],
+    )
+  ).rows[0];
+  expect(entry).toEqual({ placement_id: preservedPractice.id, seconds: 3600 });
+  const total = (
+    await owner.query(
+      'SELECT total_seconds::integer AS seconds FROM reporting.v_practicum_recorded_hours WHERE placement_id=$1',
+      [preservedPractice.id],
+    )
+  ).rows[0];
+  expect(total.seconds).toBe(3600);
 });
 
 test('signs in with a private cookie, stores only its hash and attributes the session and login to the new session', async () => {

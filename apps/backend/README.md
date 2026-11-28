@@ -27,7 +27,18 @@ Backend del Gabinete de Servicios Psicológicos UCB. Monolito modular por domini
 con capas internas y API REST sobre HTTPS. El código de identidad se organiza en
 `src/modules/identity/domain`, `application`, `infrastructure` y `presentation`.
 
-## Estado y siguiente paso en development
+## Gestión de prácticas: siguiente paso en development
+
+La gestión de prácticas ya incluye actividades y horas en dos pestañas del mismo módulo, cronómetro persistente
+y consulta directa de horas por el Director, sin aprobación. Aplica la migración
+`0007_entry_details_actions.sql` mediante `npm run db:migrate` antes de desplegar
+esta versión. No repitas el bootstrap. Consulta los [pasos de Neon y prueba del
+flujo](docs/practicum.md). Los estudiantes acceden directamente a sus horas sin
+inscripción previa ni supervisor. Crear y Play usan el mismo modal de Proyecto,
+Actividad y Descripción; Dirección puede asignar una actividad seleccionando al
+practicante. Retomar inicia directamente; Stop congela el tiempo al pulsarlo. No hay creación manual de horas ni cambios de estado de actividades desde la vista del estudiante. Las filas del estudiante ofrecen Eliminar, Editar y Retomar. El Director consulta registros y totales sin modificarlos; asigna actividades desde el directorio. La edición sólo cambia Proyecto, Actividad y Descripción; la migración `0007` protege las horas y conserva la auditoría interna.
+
+## Gestión de usuarios: bloque anterior
 
 El usuario confirmó la habilitación del Director. Este bloque completa la gestión
 operativa de Psicólogos, Auxiliares y Estudiantes de Titulación, la administración
@@ -47,8 +58,9 @@ SELECT to_regclass('audit.identity_event')::text AS identity_events;
 SELECT count(*) AS applied_migrations FROM drizzle.__drizzle_migrations;
 ```
 
-Los resultados esperados tras esta versión son `audit.identity_event` y cuatro
-migraciones. Los catálogos siguen con cinco roles, 15 permisos y 18 concesiones;
+Los resultados de ese bloque anterior eran `audit.identity_event` y cuatro
+migraciones, con cinco roles, 15 permisos y 18 concesiones. La versión de prácticas
+con sus ajustes deja ocho migraciones y añade cuatro permisos y seis concesiones;
 el número de cuentas aumenta al crear personas del equipo.
 
 Reinicia ambos procesos y prueba con datos ficticios:
@@ -249,28 +261,27 @@ esta actualización en PostgreSQL local temporal; la ejecución en Neon es manua
 
 Endpoints implementados:
 
-| Método y ruta | Comportamiento |
-| --- | --- |
-| `POST /auth/sign-in` | Valida correo y contraseña; crea sesión persistente y cookie HttpOnly. |
-| `GET /auth/me` | Devuelve identidad, roles y permisos vigentes de la sesión verificada. |
-| `POST /auth/sign-out` | Revoca la sesión y elimina su cookie. |
-| `GET /accounts` | Lista paginada de metadatos; Administrador ve identidad general y Director sólo cuentas operativas administrables. |
-| `GET /roles` | Consulta del catálogo activo predefinido; sin edición de roles o permisos. |
-| `POST /accounts/director-invitations` | Crea una cuenta pendiente y un enlace de activación; exige permiso y autenticación reciente del Administrador. |
-| `POST /auth/activations` | Establece la contraseña y consume el enlace atómicamente; 204 sin cookie de navegación. |
-| `POST /accounts/:id/director-assignment` | Designa o sustituye al Director con historial y revocación de sesiones; 204. |
-| `POST /accounts/operational-invitations` | Invita personal con roles operativos predefinidos; 201. |
-| `PATCH /accounts/:id/profile` | Corrige nombres y teléfono dentro del alcance; 204. |
-| `PUT /accounts/:id/roles` | Reemplaza expresamente los roles operativos y revoca sesiones; 204. |
-| `POST /accounts/:id/disable` | Baja lógica con motivo, revocación de sesiones, roles y enlaces; 204. |
-| `POST /accounts/:id/reinvitations` | Nuevo enlace y roles seleccionados; no revive accesos; 201. |
-| `POST /accounts/:id/password-reset-invitations` | Recuperación de un solo uso dentro del alcance; 201. |
-| `GET /auth/sessions` | Sólo sesiones interactivas propias todavía utilizables. |
-| `POST /auth/sessions/:id/revocations` | Revoca una sesión propia; 204. |
-| `POST /auth/password-change` | Verifica la contraseña actual, cambia y revoca sesiones; 204. |
-| `GET, PUT /auth/contact` | Lee o actualiza sólo el teléfono propio. |
-| `GET /identity-audit` | Metadatos de identidad paginados con alcance aplicado en SQL. |
-
+| Método y ruta                                   | Comportamiento                                                                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `POST /auth/sign-in`                            | Valida correo y contraseña; crea sesión persistente y cookie HttpOnly.                                             |
+| `GET /auth/me`                                  | Devuelve identidad, roles y permisos vigentes de la sesión verificada.                                             |
+| `POST /auth/sign-out`                           | Revoca la sesión y elimina su cookie.                                                                              |
+| `GET /accounts`                                 | Lista paginada de metadatos; Administrador ve identidad general y Director sólo cuentas operativas administrables. |
+| `GET /roles`                                    | Consulta del catálogo activo predefinido; sin edición de roles o permisos.                                         |
+| `POST /accounts/director-invitations`           | Crea una cuenta pendiente y un enlace de activación; exige permiso y autenticación reciente del Administrador.     |
+| `POST /auth/activations`                        | Establece la contraseña y consume el enlace atómicamente; 204 sin cookie de navegación.                            |
+| `POST /accounts/:id/director-assignment`        | Designa o sustituye al Director con historial y revocación de sesiones; 204.                                       |
+| `POST /accounts/operational-invitations`        | Invita personal con roles operativos predefinidos; 201.                                                            |
+| `PATCH /accounts/:id/profile`                   | Corrige nombres y teléfono dentro del alcance; 204.                                                                |
+| `PUT /accounts/:id/roles`                       | Reemplaza expresamente los roles operativos y revoca sesiones; 204.                                                |
+| `POST /accounts/:id/disable`                    | Baja lógica con motivo, revocación de sesiones, roles y enlaces; 204.                                              |
+| `POST /accounts/:id/reinvitations`              | Nuevo enlace y roles seleccionados; no revive accesos; 201.                                                        |
+| `POST /accounts/:id/password-reset-invitations` | Recuperación de un solo uso dentro del alcance; 201.                                                               |
+| `GET /auth/sessions`                            | Sólo sesiones interactivas propias todavía utilizables.                                                            |
+| `POST /auth/sessions/:id/revocations`           | Revoca una sesión propia; 204.                                                                                     |
+| `POST /auth/password-change`                    | Verifica la contraseña actual, cambia y revoca sesiones; 204.                                                      |
+| `GET, PUT /auth/contact`                        | Lee o actualiza sólo el teléfono propio.                                                                           |
+| `GET /identity-audit`                           | Metadatos de identidad paginados con alcance aplicado en SQL.                                                      |
 
 La credencial aleatoria se almacena como SHA-256 en PostgreSQL. El UUID de sesión
 es sólo un identificador de auditoría. La cookie usa `Secure` y prefijo `__Host-`

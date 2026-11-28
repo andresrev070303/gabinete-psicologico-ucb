@@ -7,6 +7,13 @@ import { HomePanel } from './HomePanel';
 import { ServiceStatusPanel } from './ServiceStatusPanel';
 import { UpcomingPanel } from './UpcomingPanel';
 import type { NavigationItem, WorkspaceSection } from './navigation';
+import {
+  canManagePractice,
+  canReadOwnPractice,
+  canReadSupervisedPractice,
+} from '../practicum/practicum-access';
+import { PracticumManagementPanel } from '../practicum/PracticumManagementPanel';
+import { PracticumPersonalPanel } from '../practicum/PracticumPersonalPanel';
 
 type WorkspaceContentProps = Readonly<{
   identity: AuthenticatedIdentity['identity'];
@@ -26,6 +33,22 @@ export function WorkspaceContent({
   onSessionEnded,
 }: WorkspaceContentProps) {
   switch (current.id) {
+    case 'practicum':
+      if (canManagePractice(identity) || canReadSupervisedPractice(identity))
+        return <PracticumManagementPanel identity={identity} />;
+      break;
+    case 'tasks':
+    case 'hours':
+    case 'my-practice':
+      if (canReadOwnPractice(identity))
+        return (
+          <PracticumPersonalPanel
+            key={current.id}
+            identity={identity}
+            view={current.id === 'my-practice' ? 'summary' : current.id}
+          />
+        );
+      break;
     case 'home':
       return (
         <HomePanel

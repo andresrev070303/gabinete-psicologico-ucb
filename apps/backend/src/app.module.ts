@@ -6,6 +6,7 @@ import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { AuthenticationModule } from '@nestjs/authentication';
 import { AuthorizationModule } from '@nestjs/authorization';
+import { PracticumModule } from './modules/practicum/practicum.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuthorizationModule } from '@nestjs/authorization';
     AuthorizationModule.forRoot(),
     DatabaseModule,
     IdentityModule,
+    PracticumModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -14,7 +14,7 @@ import { configureApplication } from '../../src/configure-application.js';
 
 export const password = 'A long testing passphrase';
 export const origin = 'http://localhost:5173';
-export async function createIdentityFixture() {
+export async function createIdentityFixture({ practicum = false } = {}) {
   const url = new URL(
     process.env.TEST_DATABASE_URL ?? 'http://missing-test-database',
   );
@@ -66,6 +66,8 @@ export async function createIdentityFixture() {
       email: 'administrator@example.test',
       password,
     });
+    if (practicum)
+      await owner.query('SELECT practicum.install_access_catalog()');
     await control.query(
       `CREATE ROLE "${role}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`,
     );
@@ -73,6 +75,11 @@ export async function createIdentityFixture() {
     await owner.query(`GRANT USAGE ON SCHEMA core,iam,audit TO "${role}"; GRANT SELECT ON ALL TABLES IN SCHEMA core,iam,audit TO "${role}";
       GRANT INSERT,UPDATE ON core.person,iam.account,iam.account_role,iam.auth_session,iam.account_action_token TO "${role}";
       GRANT EXECUTE ON FUNCTION audit.set_request_context(uuid,uuid,uuid),audit.record_auth_event(uuid,text,bytea,uuid,uuid),audit.record_identity_event(text,uuid,text) TO "${role}"`);
+    if (practicum)
+      await owner.query(`GRANT USAGE ON SCHEMA practicum,reporting TO "${role}";
+      GRANT SELECT ON ALL TABLES IN SCHEMA practicum TO "${role}";
+      GRANT INSERT ON practicum.academic_term,practicum.placement,practicum.work_task,practicum.activity_log TO "${role}";
+      GRANT UPDATE ON practicum.placement,practicum.work_task,practicum.activity_log TO "${role}"`);
     url.username = role;
     url.password = rolePassword;
     runtime = new Pool({ connectionString: url.toString(), max: 5 });

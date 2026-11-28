@@ -29,6 +29,34 @@
       "when": 1795732027132,
       "tag": "0003_identity_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795799496018,
+      "tag": "0004_practicum_time_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795805116715,
+      "tag": "0005_simplify_practice_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795819654343,
+      "tag": "0006_independent_activities",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795824876118,
+      "tag": "0007_entry_details_actions",
+      "breakpoints": true
     }
   ]
 }

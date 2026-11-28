@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../infrastructure/database/database.module.js';
 import { RoleDelegationPolicy } from './domain/role-delegation.policy.js';
+import { IdentityTransactions } from './infrastructure/identity-transactions.js';
 import { ConfigService } from '@nestjs/config';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { PasswordHasher } from '@nestjs/authentication';
@@ -62,6 +63,12 @@ import {
     IdentityAuditController,
   ],
   providers: [
+    {
+      provide: IdentityTransactions,
+      inject: [DatabaseService],
+      useFactory: (database: DatabaseService) =>
+        new IdentityTransactions(database.db),
+    },
     RoleDelegationPolicy,
     SessionTokens,
     SignInPipe,
@@ -188,5 +195,6 @@ import {
     SessionActivityInterceptor,
     { provide: APP_INTERCEPTOR, useExisting: SessionActivityInterceptor },
   ],
+  exports: [IdentityTransactions],
 })
 export class IdentityModule {}
