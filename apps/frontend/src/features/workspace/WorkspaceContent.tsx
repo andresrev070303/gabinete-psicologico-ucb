@@ -14,6 +14,10 @@ import {
 } from '../practicum/practicum-access';
 import { PracticumManagementPanel } from '../practicum/PracticumManagementPanel';
 import { PracticumPersonalPanel } from '../practicum/PracticumPersonalPanel';
+import { InstitutionalPanel } from '../institutional/InstitutionalPanel';
+import { canReadInstitutional } from '../institutional/institutional-access';
+import type { RecordKey } from '../institutional/institutional.types';
+import { AgendaCalendar } from '../agenda/AgendaCalendar';
 
 type WorkspaceContentProps = Readonly<{
   identity: AuthenticatedIdentity['identity'];
@@ -22,6 +26,8 @@ type WorkspaceContentProps = Readonly<{
   initials: string;
   onNavigate: (section: WorkspaceSection) => void;
   onSessionEnded: () => void;
+  institutionalTarget?: RecordKey | null;
+  institutionalRequest?: number;
 }>;
 
 export function WorkspaceContent({
@@ -31,8 +37,22 @@ export function WorkspaceContent({
   initials,
   onNavigate,
   onSessionEnded,
+  institutionalTarget,
+  institutionalRequest,
 }: WorkspaceContentProps) {
   switch (current.id) {
+    case 'agenda':
+      return <AgendaCalendar />;
+    case 'institutional':
+      if (canReadInstitutional(identity))
+        return (
+          <InstitutionalPanel
+            key={`${identity.accountId}:${institutionalTarget?.kind ?? ''}:${institutionalTarget?.id ?? ''}:${institutionalRequest ?? 0}`}
+            identity={identity}
+            initialRecord={institutionalTarget}
+          />
+        );
+      break;
     case 'practicum':
       if (canManagePractice(identity) || canReadSupervisedPractice(identity))
         return <PracticumManagementPanel identity={identity} />;

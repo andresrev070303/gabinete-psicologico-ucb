@@ -1,5 +1,6 @@
 import type { IconName } from '../../components/Icon';
 import type { AuthenticatedIdentity } from '../auth/auth.types';
+import { canReadInstitutional } from '../institutional/institutional-access';
 import {
   canManagePractice,
   canReadOwnPractice,
@@ -43,14 +44,14 @@ const upcomingItems: Readonly<
     icon: 'users',
   },
   institutional: {
-    label: 'Actividades institucionales',
+    label: 'Gestión institucional',
     description:
       'Proyectos, convenios y actividades que vinculan al Gabinete con su comunidad.',
     icon: 'book',
   },
   agenda: {
     label: 'Mi agenda',
-    description: 'Un espacio para organizar horarios, ambientes y encuentros.',
+    description: 'Consulta el calendario y navega entre los meses.',
     icon: 'calendar',
   },
   cases: {
@@ -110,9 +111,22 @@ const sectionsByRole: Readonly<Record<string, readonly WorkspaceSection[]>> = {
     'evaluations',
     'reports',
   ],
-  psychologist: ['agenda', 'cases', 'evaluations', 'practicum', 'supervisions'],
-  assistant: ['hours', 'my-practice', 'cases'],
-  degree_student: ['project', 'hours', 'my-practice', 'documents'],
+  psychologist: [
+    'agenda',
+    'cases',
+    'evaluations',
+    'practicum',
+    'supervisions',
+    'institutional',
+  ],
+  assistant: ['hours', 'my-practice', 'cases', 'institutional'],
+  degree_student: [
+    'project',
+    'hours',
+    'my-practice',
+    'documents',
+    'institutional',
+  ],
 };
 export function getNavigation(
   identity: WorkspaceIdentity,
@@ -144,10 +158,15 @@ export function getNavigation(
     const item = upcomingItems[id];
     if (item) {
       const available =
-        id === 'practicum'
-          ? canManagePractice(identity) || canReadSupervisedPractice(identity)
-          : ['tasks', 'hours', 'my-practice'].includes(id) &&
-            canReadOwnPractice(identity);
+        id === 'agenda'
+          ? true
+          : id === 'institutional'
+            ? canReadInstitutional(identity)
+            : id === 'practicum'
+              ? canManagePractice(identity) ||
+                canReadSupervisedPractice(identity)
+              : ['tasks', 'hours', 'my-practice'].includes(id) &&
+                canReadOwnPractice(identity);
       const label =
         id === 'practicum' && !identity.roles.includes('director')
           ? 'Prácticas supervisadas'

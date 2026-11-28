@@ -442,3 +442,7 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+# Gestión institucional
+
+El registro unificado de actividades, convenios y proyectos, los permisos del equipo y las notificaciones internas se describen en [docs/institutional.md](docs/institutional.md). Esta entrega requiere aplicar la migración `0008` con `npm run db:migrate` antes de reiniciar o desplegar el backend. No requiere nuevas variables de entorno ni repetir el bootstrap.

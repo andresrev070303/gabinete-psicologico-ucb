@@ -3,6 +3,17 @@ import { sql } from "drizzle-orm"
 import { customType } from 'drizzle-orm/pg-core';
 import type { PgTableExtraConfigValue } from 'drizzle-orm/pg-core';
 
+function institutionalMetadata() {
+  return {
+    versionNo:integer('version_no').default(1).notNull(),
+    deletedAt:timestamp('deleted_at',{withTimezone:true,mode:'string'}),
+    changeReason:varchar('change_reason',{length:500}),
+    requestFingerprint:varchar('request_fingerprint',{length:64}),
+    createdByAccountId:uuid('created_by_account_id').references(()=>accountInIam.id,{onDelete:'restrict'}),
+    updatedByAccountId:uuid('updated_by_account_id').references(()=>accountInIam.id,{onDelete:'restrict'}),
+  };
+}
+
 const bytea = customType<{
   data: Buffer;
   driverData: Buffer;
@@ -1000,6 +1011,8 @@ export const activityLogInPracticum = practicum.table(
 );
 
 export const agreementInProjects = projects.table("agreement", {
+	...institutionalMetadata(),
+	summary: text(),
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	institutionId: uuid("institution_id").notNull(),
 	agreementCode: varchar("agreement_code", { length: 65 }),
@@ -1027,6 +1040,8 @@ export const agreementInProjects = projects.table("agreement", {
 ]);
 
 export const projectInProjects = projects.table("project", {
+	...institutionalMetadata(),
+	institutionId: uuid('institution_id').references(() => institutionInCore.id, { onDelete:'restrict' }),
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	projectCode: varchar("project_code", { length: 60 }),
 	name: varchar({ length: 200 }).notNull(),
@@ -1071,6 +1086,9 @@ export const projectInstitutionInProjects = projects.table("project_institution"
 ]);
 
 export const activityInProjects = projects.table("activity", {
+	...institutionalMetadata(),
+	responsibleAccountId: uuid('responsible_account_id').references(() => accountInIam.id, { onDelete:'restrict' }),
+	results: text(),
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	projectId: uuid("project_id"),
 	agreementId: uuid("agreement_id"),
@@ -1102,7 +1120,7 @@ export const activityInProjects = projects.table("activity", {
 			foreignColumns: [projectInProjects.id],
 			name: "activity_project_id_fkey"
 		}).onDelete("restrict"),
-	check("activity_activity_kind_check", sql`(activity_kind)::text = ANY ((ARRAY['workshop'::character varying, 'campaign'::character varying, 'research'::character varying, 'meeting'::character varying, 'training'::character varying, 'other'::character varying])::text[])`),
+	check("activity_activity_kind_check", sql`activity_kind IN ('workshop','talk','campaign','research','meeting','training','other')`),
 	check("activity_activity_status_check", sql`(activity_status)::text = ANY ((ARRAY['planned'::character varying, 'completed'::character varying, 'cancelled'::character varying])::text[])`),
 	check("activity_check", sql`(ends_at IS NULL) OR (ends_at > starts_at)`),
 	check("activity_reported_participants_check", sql`(reported_participants IS NULL) OR (reported_participants >= 0)`),
@@ -1127,6 +1145,44 @@ export const activityParticipantInProjects = projects.table("activity_participan
 		}).onDelete("restrict"),
 	unique("activity_participant_activity_id_person_id_key").on(table.activityId, table.personId),
 	check("activity_participant_attendance_status_check", sql`(attendance_status)::text = ANY ((ARRAY['registered'::character varying, 'attended'::character varying, 'absent'::character varying])::text[])`),
+]);
+
+/** Internal team membership is separate from beneficiary attendance. */
+export const institutionalTeamInProjects=projects.table('institutional_team',{
+  id:uuid().defaultRandom().primaryKey(),
+  activityId:uuid('activity_id').references(()=>activityInProjects.id,{onDelete:'restrict'}),
+  agreementId:uuid('agreement_id').references(()=>agreementInProjects.id,{onDelete:'restrict'}),
+  projectId:uuid('project_id').references(()=>projectInProjects.id,{onDelete:'restrict'}),
+  accountId:uuid('account_id').notNull().references(()=>accountInIam.id,{onDelete:'restrict'}),
+  removedAt:timestamp('removed_at',{withTimezone:true,mode:'string'}),
+  createdByAccountId:uuid('created_by_account_id').references(()=>accountInIam.id,{onDelete:'restrict'}),
+  updatedByAccountId:uuid('updated_by_account_id').references(()=>accountInIam.id,{onDelete:'restrict'}),
+  createdAt:timestamp('created_at',{withTimezone:true,mode:'string'}).defaultNow().notNull(),
+},table=>[
+  check('institutional_team_one_target',sql`num_nonnulls(activity_id,agreement_id,project_id)=1`),
+  uniqueIndex('institutional_team_activity_uq').on(table.activityId,table.accountId).where(sql`activity_id IS NOT NULL AND removed_at IS NULL`),
+  uniqueIndex('institutional_team_agreement_uq').on(table.agreementId,table.accountId).where(sql`agreement_id IS NOT NULL AND removed_at IS NULL`),
+  uniqueIndex('institutional_team_project_uq').on(table.projectId,table.accountId).where(sql`project_id IS NOT NULL AND removed_at IS NULL`),
+  index('institutional_team_account_idx').on(table.accountId),
+]);
+
+export const userNotificationInIam=iam.table('user_notification',{
+  id:uuid().defaultRandom().primaryKey(),
+  recipientAccountId:uuid('recipient_account_id').notNull().references(()=>accountInIam.id,{onDelete:'restrict'}),
+  senderAccountId:uuid('sender_account_id').notNull().references(()=>accountInIam.id,{onDelete:'restrict'}),
+  eventKey:uuid('event_key').notNull().unique(),
+  eventType:varchar('event_type',{length:40}).notNull(),
+  resourceKind:varchar('resource_kind',{length:20}).notNull(),
+  resourceId:uuid('resource_id').notNull(),
+  resourceType:varchar('resource_type',{length:35}).notNull(),
+  resourceTitle:varchar('resource_title',{length:230}).notNull(),
+  actorName:varchar('actor_name',{length:250}).notNull(),
+  createdAt:timestamp('created_at',{withTimezone:true,mode:'string'}).defaultNow().notNull(),
+  readAt:timestamp('read_at',{withTimezone:true,mode:'string'}),
+},table=>[
+  check('notification_event_type_check',sql`event_type='institutional_assignment'`),
+  check('notification_resource_kind_check',sql`resource_kind IN ('activity','agreement','project')`),
+  index('notification_recipient_page_idx').on(table.recipientAccountId,table.createdAt,table.id),
 ]);
 
 export const serviceFeedbackInQuality = quality.table("service_feedback", {

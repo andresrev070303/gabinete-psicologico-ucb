@@ -57,6 +57,13 @@
       "when": 1795824876118,
       "tag": "0007_entry_details_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795830083436,
+      "tag": "0008_institutional_management",
+      "breakpoints": true
     }
   ]
 }

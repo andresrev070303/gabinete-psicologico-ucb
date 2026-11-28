@@ -6,6 +6,8 @@ import { WorkspaceContent } from './WorkspaceContent';
 import { WorkspaceSidebar } from './WorkspaceSidebar';
 import { getNavigation } from './navigation';
 import type { WorkspaceSection } from './navigation';
+import { NotificationBell } from '../notifications/NotificationBell';
+import type { RecordKey } from '../institutional/institutional.types';
 import {
   PracticumTimerBar,
   PracticumTimerProvider,
@@ -20,6 +22,9 @@ export function Workspace({
 }: AuthenticatedWorkspaceProps) {
   const [selected, setSelected] = useState<WorkspaceSection>('home');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [institutionalTarget, setInstitutionalTarget] =
+    useState<RecordKey | null>(null);
+  const [institutionalRequest, setInstitutionalRequest] = useState(0);
   const mobileNavigation = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const contentHeading = useRef<HTMLHeadingElement>(null);
@@ -37,6 +42,7 @@ export function Workspace({
     setMenuOpen(false);
   }
   function navigate(id: WorkspaceSection) {
+    if (id === 'institutional') setInstitutionalTarget(null);
     setSelected(id);
     closeMenu(false);
     requestAnimationFrame(() => contentHeading.current?.focus());
@@ -99,22 +105,46 @@ export function Workspace({
               </button>
               <span>Gabinete de Servicios Psicológicos</span>
             </div>
-            <button
-              className="user-summary"
-              type="button"
-              onClick={() => navigate('profile')}
-              aria-label="Abrir mi cuenta"
-            >
-              <span className="user-avatar" aria-hidden="true">
-                {initials}
-              </span>
-              <span>
-                <strong>
-                  {identity.givenNames} {identity.familyNames}
-                </strong>
-                <small>{roleSummary}</small>
-              </span>
-            </button>
+            <div className="workspace-header-actions">
+              {identity.permissions.includes('notifications.read_own') &&
+                identity.roles.some((role) =>
+                  [
+                    'director',
+                    'psychologist',
+                    'assistant',
+                    'degree_student',
+                  ].includes(role),
+                ) && (
+                  <NotificationBell
+                    key={identity.accountId}
+                    onOpen={(key) => {
+                      setInstitutionalTarget(key);
+                      setInstitutionalRequest((value) => value + 1);
+                      setSelected('institutional');
+                      closeMenu(false);
+                      requestAnimationFrame(() =>
+                        contentHeading.current?.focus(),
+                      );
+                    }}
+                  />
+                )}
+              <button
+                className="user-summary"
+                type="button"
+                onClick={() => navigate('profile')}
+                aria-label="Abrir mi cuenta"
+              >
+                <span className="user-avatar" aria-hidden="true">
+                  {initials}
+                </span>
+                <span>
+                  <strong>
+                    {identity.givenNames} {identity.familyNames}
+                  </strong>
+                  <small>{roleSummary}</small>
+                </span>
+              </button>
+            </div>
           </header>
           <PracticumTimerBar />
           <main
@@ -144,6 +174,8 @@ export function Workspace({
               initials={initials}
               onNavigate={navigate}
               onSessionEnded={onSessionEnded}
+              institutionalTarget={institutionalTarget}
+              institutionalRequest={institutionalRequest}
             />
             <footer className="workspace-footer">
               Gabinete de Servicios Psicológicos{' '}

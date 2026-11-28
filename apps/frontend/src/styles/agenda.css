@@ -1,0 +1,77 @@
+.agenda-calendar {
+  padding: 1.5rem;
+  min-width: 0;
+}
+.agenda-calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.agenda-calendar-header h2 {
+  text-transform: capitalize;
+  margin: 0;
+}
+.agenda-calendar-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+.agenda-calendar-controls button {
+  min-width: 44px;
+}
+.agenda-calendar-grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: center;
+}
+.agenda-calendar-grid th {
+  padding: 0.8rem 0.2rem;
+  color: var(--color-navy);
+  background: var(--color-soft);
+  font-size: 0.85rem;
+}
+.agenda-calendar-grid abbr {
+  text-decoration: none;
+}
+.agenda-calendar-grid td {
+  height: clamp(3.5rem, 8vw, 5.5rem);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink);
+}
+.agenda-calendar-grid time {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+}
+.agenda-calendar-grid .agenda-calendar-outside {
+  color: var(--color-muted);
+  background: var(--color-soft);
+}
+.agenda-calendar-grid time[aria-current='date'] {
+  background: var(--color-navy);
+  color: white;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .agenda-calendar {
+    padding: 1rem;
+  }
+  .agenda-calendar-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .agenda-calendar-controls {
+    align-self: flex-end;
+  }
+  .agenda-calendar-grid th {
+    font-size: 0.75rem;
+  }
+  .agenda-calendar-grid time {
+    width: 2rem;
+    height: 2rem;
+  }
+}

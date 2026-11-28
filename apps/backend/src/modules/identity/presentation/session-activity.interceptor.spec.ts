@@ -18,7 +18,9 @@ function fixture(path: string, authenticated = true) {
   const recordActivity = vi.fn().mockResolvedValue(undefined);
   const authentication = { recordActivity } as unknown as AuthenticationService;
   const execution = {
-    switchToHttp: () => ({ getRequest: () => ({ path, headers: {} }) }),
+    switchToHttp: () => ({
+      getRequest: () => ({ path, method: 'GET', headers: {} }),
+    }),
   } as unknown as ExecutionContext;
   return {
     interceptor: new SessionActivityInterceptor(context, authentication),
@@ -54,7 +56,7 @@ describe('SessionActivityInterceptor', () => {
     expect(recordActivity).not.toHaveBeenCalled();
   });
 
-  it.each(['/auth/me', '/auth/sign-out'])(
+  it.each(['/auth/me', '/auth/sign-out', '/notifications', '/notifications/'])(
     'does not extend activity for %s',
     async (path) => {
       const { interceptor, execution, recordActivity } = fixture(path);

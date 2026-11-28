@@ -31,6 +31,8 @@ export class SessionActivityInterceptor implements NestInterceptor {
       !user ||
       !session ||
       request.path === '/auth/me' ||
+      (request.method === 'GET' &&
+        /^\/notifications\/?$/u.test(request.path)) ||
       request.path === '/auth/sign-out'
     )
       return next.handle();

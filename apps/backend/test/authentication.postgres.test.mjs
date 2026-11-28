@@ -231,7 +231,7 @@ test('upgrades an existing installation without replacing the administrator, pas
       'SELECT (SELECT count(*)::int FROM iam.role) AS roles,(SELECT count(*)::int FROM iam.permission) AS permissions,(SELECT count(*)::int FROM iam.role_permission) AS grants',
     )
   ).rows[0];
-  expect(catalog).toEqual({ roles: 5, permissions: 19, grants: 24 });
+  expect(catalog).toEqual({ roles: 5, permissions: 22, grants: 32 });
   const session = (
     await owner.query(
       'SELECT account_id,session_kind FROM iam.auth_session WHERE id=$1',

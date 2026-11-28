@@ -94,11 +94,12 @@ async function main() {
       password,
     });
     await pool.query('SELECT practicum.install_access_catalog()');
+    await pool.query('SELECT projects.install_access_catalog()');
     stdout.write(
       `Administrator created: ${identity.email}\nAccount ID: ${identity.accountId}\n`,
     );
     stdout.write(
-      'Expected totals: 1 account, 5 roles, 19 permissions, 24 role-permission grants.\n',
+      'Expected totals: 1 account, 5 roles, 22 permissions, 32 role-permission grants.\n',
     );
   } finally {
     await pool.end();

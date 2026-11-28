@@ -19,7 +19,7 @@ function identity(
 describe('Workspace navigation', () => {
   it.each([
     ['director', ['practicum', 'institutional', 'reports']],
-    ['psychologist', ['agenda', 'cases', 'supervisions']],
+    ['psychologist', ['cases', 'supervisions']],
     ['assistant', ['hours', 'my-practice']],
     ['degree_student', ['project', 'hours', 'documents']],
   ])(
@@ -30,6 +30,15 @@ describe('Workspace navigation', () => {
         expect(items.find((item) => item.id === id)?.available).toBe(false);
       expect(items.find((item) => item.id === 'accounts')).toBeUndefined();
       expect(items.find((item) => item.id === 'system')).toBeUndefined();
+    },
+  );
+  it.each(['director', 'psychologist'])(
+    'enables the calendar for the existing %s agenda',
+    (role) => {
+      expect(
+        getNavigation(identity([role])).find((item) => item.id === 'agenda')
+          ?.available,
+      ).toBe(true);
     },
   );
 

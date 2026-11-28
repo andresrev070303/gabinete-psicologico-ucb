@@ -18,6 +18,8 @@ export default defineConfig({
       include: [
         'src/modules/identity/**/*.ts',
         'src/modules/practicum/**/*.ts',
+        'src/modules/institutional/**/*.ts',
+        'src/modules/notifications/**/*.ts',
       ],
       exclude: ['src/**/*.spec.ts'],
       reportsDirectory: './coverage/postgres',

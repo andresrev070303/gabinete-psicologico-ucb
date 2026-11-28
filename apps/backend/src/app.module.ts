@@ -7,6 +7,7 @@ import { IdentityModule } from './modules/identity/identity.module.js';
 import { AuthenticationModule } from '@nestjs/authentication';
 import { AuthorizationModule } from '@nestjs/authorization';
 import { PracticumModule } from './modules/practicum/practicum.module.js';
+import { InstitutionalModule } from './modules/institutional/institutional.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PracticumModule } from './modules/practicum/practicum.module.js';
     DatabaseModule,
     IdentityModule,
     PracticumModule,
+    InstitutionalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

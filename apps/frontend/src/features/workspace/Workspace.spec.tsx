@@ -75,6 +75,25 @@ describe('Workspace screens', () => {
     expect(fetcher).toHaveBeenCalledOnce();
     expect(String(fetcher.mock.calls[0]![0])).toContain('/api/accounts?page=1');
   });
+  it.each(['director', 'psychologist'])(
+    'opens the calendar in the %s workspace without requesting business data',
+    (role) => {
+      render(
+        <Workspace {...props()} identity={{ ...director, roles: [role] }} />,
+      );
+      fireEvent.click(navigation().getByRole('button', { name: 'Mi agenda' }));
+      expect(
+        screen.getByRole('region', { name: 'Calendario de mi agenda' }),
+      ).toBeDefined();
+      expect(screen.getByRole('table')).toBeDefined();
+      expect(
+        screen.queryByRole('heading', {
+          name: 'Estamos preparando este espacio',
+        }),
+      ).toBeNull();
+      expect(fetcher).not.toHaveBeenCalled();
+    },
+  );
 
   it('opens the real own-access panel and delegates logout to the authentication boundary', () => {
     const context = props();

@@ -23,6 +23,7 @@ Las variables `VITE_*` son públicas: no deben contener contraseñas, tokens ni 
 - `src/features/auth`: presentación y estado del acceso; utiliza el cliente HTTP existente.
 - `src/features/accounts`: invitaciones, activación, administración, sesiones y auditoría.
 - `src/features/practicum`: prácticas, tareas, cronómetro y registros de horas.
+- `src/features/agenda`: calendario mensual de consulta, sin citas ni operaciones sobre registros.
 - `src/features/workspace`: estructura autenticada, navegación por perfil y composición de pantallas.
 - `src/lib`: cliente HTTP y funciones de presentación en español.
 - `src/styles`: colores, tipografía, componentes y adaptación a pantallas pequeñas.
@@ -43,7 +44,9 @@ Los menús de cuentas y auditoría requieren los permisos recibidos de la API. U
 
 Pasante es una denominación de práctica dentro del perfil auxiliar existente; este rediseño no agrega un sexto rol de seguridad.
 
-Usuarios, invitaciones, activación, mi cuenta y auditoría utilizan sus operaciones actuales. Prácticas ya utiliza la API: el estudiante registra tiempo y el Director consulta los mismos registros y totales, sin aprobación. El Psicólogo puede consultar sus prácticas supervisadas. Actividades institucionales y los demás módulos futuros muestran **Próximamente**, sin simular guardados.
+Usuarios, invitaciones, activación, mi cuenta y auditoría utilizan sus operaciones actuales. Prácticas ya utiliza la API: el estudiante registra tiempo y el Director consulta los mismos registros y totales, sin aprobación. El Psicólogo puede consultar sus prácticas supervisadas. Gestión institucional utiliza su API y los demás módulos futuros muestran **Próximamente**, sin simular guardados.
+
+**Mi agenda** muestra un calendario mensual para los perfiles que ya incluyen ese menú (Director y Psicólogo). Permite avanzar y retroceder meses, volver a Hoy y reconocer la fecha actual de Bolivia. Las semanas empiezan en lunes. Es un calendario de consulta, sin citas, eventos, solicitudes HTTP ni cambios en Neon.
 
 Antes de probar prácticas, aplica la migración del backend siguiendo la [guía de Neon y prácticas](../backend/docs/practicum.md). No se agregan variables de entorno ni cambia `VITE_API_URL=/api`.
 
@@ -72,3 +75,9 @@ npm run build
 
 Las pruebas usan respuestas HTTP simuladas y no conectan con Neon ni envían correos.
 Comprueba también el login, menú móvil y formularios en el navegador antes de publicar cambios visuales.
+
+# Gestión institucional y campana
+
+La sección **Gestión institucional** ofrece una lista común y un formulario con un desplegable de tipos. Dirección administra los registros; las demás cuentas operativas consultan los registros asignados. La campana muestra avisos internos persistentes y permite abrir el registro y marcarlo leído. Se actualiza cada 60 segundos en pestañas visibles, al recuperar el foco y al abrirla. No envía correo.
+
+Antes de probar, aplica la migración `0008` del backend y vuelve a ingresar para actualizar los permisos. Se conserva `VITE_API_URL=/api`. Los detalles y el procedimiento de Neon están en [la guía del backend](../backend/docs/institutional.md).

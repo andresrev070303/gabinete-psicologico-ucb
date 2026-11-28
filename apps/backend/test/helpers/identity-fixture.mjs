@@ -14,7 +14,10 @@ import { configureApplication } from '../../src/configure-application.js';
 
 export const password = 'A long testing passphrase';
 export const origin = 'http://localhost:5173';
-export async function createIdentityFixture({ practicum = false } = {}) {
+export async function createIdentityFixture({
+  practicum = false,
+  institutional = false,
+} = {}) {
   const url = new URL(
     process.env.TEST_DATABASE_URL ?? 'http://missing-test-database',
   );
@@ -68,6 +71,8 @@ export async function createIdentityFixture({ practicum = false } = {}) {
     });
     if (practicum)
       await owner.query('SELECT practicum.install_access_catalog()');
+    if (institutional)
+      await owner.query('SELECT projects.install_access_catalog()');
     await control.query(
       `CREATE ROLE "${role}" LOGIN PASSWORD '${rolePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS`,
     );
@@ -80,6 +85,10 @@ export async function createIdentityFixture({ practicum = false } = {}) {
       GRANT SELECT ON ALL TABLES IN SCHEMA practicum TO "${role}";
       GRANT INSERT ON practicum.academic_term,practicum.placement,practicum.work_task,practicum.activity_log TO "${role}";
       GRANT UPDATE ON practicum.placement,practicum.work_task,practicum.activity_log TO "${role}"`);
+    if (institutional)
+      await owner.query(`GRANT USAGE ON SCHEMA projects TO "${role}";
+        GRANT SELECT ON ALL TABLES IN SCHEMA projects TO "${role}";
+        GRANT INSERT,UPDATE ON core.institution,projects.activity,projects.agreement,projects.project,projects.institutional_team,iam.user_notification TO "${role}"`);
     url.username = role;
     url.password = rolePassword;
     runtime = new Pool({ connectionString: url.toString(), max: 5 });

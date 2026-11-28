@@ -1,0 +1,126 @@
+.workspace-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.notification-trigger {
+  position: relative;
+  flex-shrink: 0;
+}
+.notification-trigger svg {
+  width: 22px;
+  height: 22px;
+}
+.notification-count {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  background: var(--color-gold);
+  color: var(--color-ink);
+  border: 2px solid white;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  min-width: 20px;
+  padding: 0 0.2rem;
+  font-weight: 700;
+}
+.notification-error-dot {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-error);
+}
+.notification-dialog {
+  width: min(460px, calc(100% - 1.5rem));
+  max-height: calc(100svh - 2rem);
+  margin: 1rem 1rem auto auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0;
+  color: var(--color-ink);
+  box-shadow: var(--shadow);
+}
+.notification-dialog::backdrop {
+  background: rgb(20 45 62 / 20%);
+}
+.notification-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
+.notification-dialog header p {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+.notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notification-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.notification-unread {
+  background: #eef7fc;
+}
+.notification-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0.5rem;
+  background: white;
+  color: var(--color-navy);
+}
+.notification-symbol svg {
+  width: 18px;
+  height: 18px;
+}
+.notification-list p {
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.notification-list small {
+  display: block;
+  color: var(--color-muted);
+  margin: 0.4rem 0;
+}
+.notification-list button {
+  font-size: 0.85rem;
+  min-height: 34px;
+  padding: 0.3rem 0.6rem;
+}
+.notification-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+.notification-empty,
+.notification-dialog > p {
+  padding: 1.25rem;
+}
+@media (max-width: 600px) {
+  .workspace-header-actions {
+    gap: 0.6rem;
+  }
+  .notification-dialog {
+    margin: 0.75rem auto;
+  }
+}
